@@ -14,37 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
-      captions: {
+      contents: {
         Row: {
-          content: string | null
+          captions: string | null
           created_at: string
-          id: number
-          product_id: number | null
+          id: string
+          image_urls: string[]
+          product_id: string | null
           schedule: string | null
-          social_media: string | null
+          social_media: string[] | null
           status: boolean | null
         }
         Insert: {
-          content?: string | null
+          captions?: string | null
           created_at?: string
-          id?: number
-          product_id?: number | null
+          id?: string
+          image_urls: string[]
+          product_id?: string | null
           schedule?: string | null
-          social_media?: string | null
+          social_media?: string[] | null
           status?: boolean | null
         }
         Update: {
-          content?: string | null
+          captions?: string | null
           created_at?: string
-          id?: number
-          product_id?: number | null
+          id?: string
+          image_urls?: string[]
+          product_id?: string | null
           schedule?: string | null
-          social_media?: string | null
+          social_media?: string[] | null
           status?: boolean | null
         }
         Relationships: [
           {
-            foreignKeyName: "captions_product_id_fkey"
+            foreignKeyName: "contents_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -55,34 +58,34 @@ export type Database = {
       products: {
         Row: {
           category: string | null
-          clicked: number | null
+          clicked_count: number | null
           created_at: string
           description: string | null
-          id: number
+          id: string
           image_url: string | null
-          name: string
+          name: string | null
           price: number | null
           user_id: string | null
         }
         Insert: {
           category?: string | null
-          clicked?: number | null
+          clicked_count?: number | null
           created_at?: string
           description?: string | null
-          id: number
+          id?: string
           image_url?: string | null
-          name: string
+          name?: string | null
           price?: number | null
           user_id?: string | null
         }
         Update: {
           category?: string | null
-          clicked?: number | null
+          clicked_count?: number | null
           created_at?: string
           description?: string | null
-          id?: number
+          id?: string
           image_url?: string | null
-          name?: string
+          name?: string | null
           price?: number | null
           user_id?: string | null
         }
@@ -114,33 +117,39 @@ export type Database = {
       }
       website_config: {
         Row: {
+          brand_name: string | null
           color_scheme: string | null
           created_at: string
           cta_text: string | null
+          faq: Json | null
           heading: string | null
-          id: number
+          id: string
           logo_url: string | null
           paragraph: string | null
           typography: string | null
           user_id: string | null
         }
         Insert: {
+          brand_name?: string | null
           color_scheme?: string | null
           created_at?: string
           cta_text?: string | null
+          faq?: Json | null
           heading?: string | null
-          id?: number
+          id?: string
           logo_url?: string | null
           paragraph?: string | null
           typography?: string | null
           user_id?: string | null
         }
         Update: {
+          brand_name?: string | null
           color_scheme?: string | null
           created_at?: string
           cta_text?: string | null
+          faq?: Json | null
           heading?: string | null
-          id?: number
+          id?: string
           logo_url?: string | null
           paragraph?: string | null
           typography?: string | null

@@ -14,7 +14,11 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
+import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
+import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
+import { Route as AuthenticatedKontenIdRouteImport } from './routes/_authenticated/konten/$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -41,9 +45,30 @@ const AuthenticatedLandingPageRoute =
     path: '/landing-page',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedKontenIndexRoute =
+  AuthenticatedKontenIndexRouteImport.update({
+    id: '/konten/',
+    path: '/konten/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedKontenBaruRoute = AuthenticatedKontenBaruRouteImport.update({
+  id: '/konten/baru',
+  path: '/konten/baru',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedKontenIdRoute = AuthenticatedKontenIdRouteImport.update({
+  id: '/konten/$id',
+  path: '/konten/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
@@ -53,6 +78,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
+  '/products': typeof AuthenticatedProductsRoute
+  '/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/konten/': typeof AuthenticatedKontenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -60,6 +89,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
+  '/products': typeof AuthenticatedProductsRoute
+  '/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/konten': typeof AuthenticatedKontenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -75,6 +108,32 @@ export interface FileRouteTypes {
   fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
+  '/_authenticated/products': typeof AuthenticatedProductsRoute
+  '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/login'
+    | '/dashboard'
+    | '/products'
+    | '/konten/$id'
+    | '/konten/baru'
+    | '/konten/'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/about'
+    | '/login'
+    | '/dashboard'
+    | '/products'
+    | '/konten/$id'
+    | '/konten/baru'
+    | '/konten'
   id:
     | '__root__'
     | '/'
@@ -83,6 +142,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/dashboard'
     | '/_authenticated/landing-page'
+    | '/_authenticated/products'
+    | '/_authenticated/konten/$id'
+    | '/_authenticated/konten/baru'
+    | '/_authenticated/konten/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -127,6 +190,11 @@ declare module '@tanstack/react-router' {
       path: '/landing-page'
       fullPath: '/landing-page'
       preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
+    '/_authenticated/products': {
+      id: '/_authenticated/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof AuthenticatedProductsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -136,17 +204,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/konten/': {
+      id: '/_authenticated/konten/'
+      path: '/konten'
+      fullPath: '/konten/'
+      preLoaderRoute: typeof AuthenticatedKontenIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/konten/baru': {
+      id: '/_authenticated/konten/baru'
+      path: '/konten/baru'
+      fullPath: '/konten/baru'
+      preLoaderRoute: typeof AuthenticatedKontenBaruRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/konten/$id': {
+      id: '/_authenticated/konten/$id'
+      path: '/konten/$id'
+      fullPath: '/konten/$id'
+      preLoaderRoute: typeof AuthenticatedKontenIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLandingPageRoute: typeof AuthenticatedLandingPageRoute
+  AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
+  AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
+  AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
+  AuthenticatedKontenIndexRoute: typeof AuthenticatedKontenIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLandingPageRoute: AuthenticatedLandingPageRoute,
+  AuthenticatedProductsRoute: AuthenticatedProductsRoute,
+  AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
+  AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
+  AuthenticatedKontenIndexRoute: AuthenticatedKontenIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
