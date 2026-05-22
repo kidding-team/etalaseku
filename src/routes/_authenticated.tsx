@@ -59,7 +59,7 @@ function AuthenticatedLayout() {
           </div>
           <ThemeToggle />
         </section>
-        <main className="h-full p-6">
+        <main className="flex flex-1 flex-col min-h-0 p-6">
           <Outlet />
         </main>
       </SidebarInset>

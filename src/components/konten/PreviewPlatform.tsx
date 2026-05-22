@@ -43,13 +43,11 @@ function MediaCarousel({
   mediaUrls,
   ratio = 1,
   rounded = false,
-  fit = 'cover',
   bg = 'bg-muted',
 }: {
   mediaUrls: string[]
   ratio?: number
   rounded?: boolean
-  fit?: 'cover' | 'contain'
   bg?: string
 }) {
   const [active, setActive] = React.useState(0)
@@ -77,17 +75,25 @@ function MediaCarousel({
     )
   }
 
+  const current = mediaUrls[active] ?? main
+
   return (
     <div className={cn('relative', rounded && 'overflow-hidden rounded-md')}>
       <AspectRatio ratio={ratio} className={cn('overflow-hidden', bg)}>
-        <img
-          src={mediaUrls[active] ?? main}
-          alt=""
-          className={cn(
-            'size-full',
-            fit === 'cover' ? 'object-cover' : 'object-contain',
-          )}
-        />
+        <div className="relative size-full">
+          {/* Blur backdrop — gambar yang sama, di-cover & blur untuk isi area kosong */}
+          <img
+            src={current}
+            aria-hidden
+            className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
+          />
+          {/* Foreground — gambar utuh, fit di dalam frame tanpa terpotong */}
+          <img
+            src={current}
+            alt=""
+            className="relative size-full object-contain"
+          />
+        </div>
       </AspectRatio>
       {mediaUrls.length > 1 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5">
@@ -160,7 +166,6 @@ function InstagramPreview({
         mediaUrls={mediaUrls}
         ratio={1}
         bg="bg-neutral-900"
-        fit="cover"
       />
 
       <div className="flex items-center gap-3 px-3 pt-3">
@@ -218,7 +223,18 @@ function TikTokPreview({
       <div className="relative">
         <AspectRatio ratio={9 / 16} className="overflow-hidden bg-neutral-900">
           {main ? (
-            <img src={main} alt="" className="size-full object-cover" />
+            <div className="relative size-full">
+              <img
+                src={main}
+                aria-hidden
+                className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
+              />
+              <img
+                src={main}
+                alt=""
+                className="relative size-full object-contain"
+              />
+            </div>
           ) : (
             <div className="flex size-full items-center justify-center text-neutral-600">
               <ImageIcon className="size-10" />
@@ -361,7 +377,18 @@ function FacebookMediaGrid({ mediaUrls }: { mediaUrls: string[] }) {
         ratio={16 / 10}
         className="overflow-hidden bg-neutral-100 dark:bg-neutral-800"
       >
-        <img src={mediaUrls[0]} alt="" className="size-full object-cover" />
+        <div className="relative size-full">
+          <img
+            src={mediaUrls[0]}
+            aria-hidden
+            className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
+          />
+          <img
+            src={mediaUrls[0]}
+            alt=""
+            className="relative size-full object-contain"
+          />
+        </div>
       </AspectRatio>
     )
   }
@@ -449,7 +476,18 @@ function TwitterPreview({
                 ratio={4 / 5}
                 className="overflow-hidden bg-neutral-900"
               >
-                <img src={main} alt="" className="size-full object-contain" />
+                <div className="relative size-full">
+                  <img
+                    src={main}
+                    aria-hidden
+                    className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
+                  />
+                  <img
+                    src={main}
+                    alt=""
+                    className="relative size-full object-contain"
+                  />
+                </div>
               </AspectRatio>
             </div>
           )}

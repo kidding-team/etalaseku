@@ -28,9 +28,8 @@ function KontenDetailRouteComponent() {
     })
   }, [])
 
-  const numericId = Number(id)
-
-  if (!Number.isFinite(numericId) || numericId <= 0) {
+  // id is now a UUID string, no need for numeric validation
+  if (!id || id.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
         <h3 className="text-lg font-semibold">ID konten tidak valid</h3>
@@ -44,7 +43,7 @@ function KontenDetailRouteComponent() {
   return (
     <KontenDetailPage
       mode="edit"
-      contentId={numericId}
+      contentId={id}
       username={username}
     />
   )

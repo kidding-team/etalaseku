@@ -8,16 +8,16 @@ import { STATUS_LABELS } from '@/lib/konten-utils'
 
 export type CardKontenProps = {
   content: ContentRow
-  onClick: (id: number) => void
+  onClick: (id: string) => void
 }
 
-// Card konten di slot grid. Layout: thumbnail kecil + ikon platform(s) + jam + badge status.
 export function CardKonten({ content, onClick }: CardKontenProps) {
-  const time = format(new Date(content.scheduled_at), 'HH:mm')
-  const thumbnail = content.media_urls[0]
-  // Tampilkan max 3 ikon agar muat di slot kecil; sisanya jadi badge "+N".
-  const visiblePlatforms = content.platforms.slice(0, 3)
-  const remaining = content.platforms.length - visiblePlatforms.length
+  const time = content.schedule
+    ? format(new Date(content.schedule), 'HH:mm')
+    : ''
+  const thumbnail = content.image_urls[0]
+  const visiblePlatforms = content.social_media.slice(0, 3)
+  const remaining = content.social_media.length - visiblePlatforms.length
   return (
     <button
       type="button"
@@ -27,7 +27,7 @@ export function CardKonten({ content, onClick }: CardKontenProps) {
         'cursor-pointer hover:bg-accent transition-colors duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
       )}
-      aria-label={`Buka konten ${time} ${content.platforms.join(', ')}`}
+      aria-label={`Buka konten ${time} ${content.social_media.join(', ')}`}
     >
       <div className="relative size-7 shrink-0 overflow-hidden rounded bg-muted">
         {thumbnail ? (
@@ -59,11 +59,11 @@ export function CardKonten({ content, onClick }: CardKontenProps) {
       <span
         className={cn(
           'ml-auto shrink-0 truncate rounded px-1.5 py-0.5 text-[10px] font-medium',
-          STATUS_BADGE_CLASS[content.status],
+          STATUS_BADGE_CLASS[String(content.status)],
         )}
-        title={STATUS_LABELS[content.status]}
+        title={STATUS_LABELS[String(content.status)]}
       >
-        {STATUS_LABELS[content.status]}
+        {STATUS_LABELS[String(content.status)]}
       </span>
     </button>
   )

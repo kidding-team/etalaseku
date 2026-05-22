@@ -8,11 +8,10 @@ import {
   getAllContents,
   getContentsByDateRange,
   subscribe,
-} from '@/server/modules/contents/contents-mock-store'
+} from '@/server/modules/contents/contents-repositories'
 import type {
   ContentRow,
   Platform,
-  Status,
 } from '@/server/modules/contents/contents-schema'
 import { roundUpToNextHour } from '@/lib/konten-utils'
 import { ToolbarKalendar } from './ToolbarKalendar'
@@ -21,11 +20,10 @@ import { GridKalendar } from './GridKalendar'
 export type KontenPageProps = {
   weekStartIso?: string
   platforms?: Platform[]
-  status?: Status
+  status?: boolean
 }
 
-// Halaman utama: kalendar mingguan + toolbar. Detail/create dipindahkan
-// ke route terpisah (/konten/baru dan /konten/$id).
+// Halaman utama: kalendar mingguan + toolbar.
 export function KontenPage({
   weekStartIso,
   platforms,
@@ -50,7 +48,7 @@ export function KontenPage({
         getContentsByDateRange({
           start: start.toISOString(),
           end: end.toISOString(),
-          platforms: activePlatforms.length > 0 ? activePlatforms : undefined,
+          social_media: activePlatforms.length > 0 ? activePlatforms : undefined,
           status: activeStatus,
         }),
         getAllContents(),
@@ -88,10 +86,10 @@ export function KontenPage({
     })
   }
 
-  const navigateToDetail = (id: number) => {
+  const navigateToDetail = (id: string) => {
     void navigate({
       to: '/konten/$id',
-      params: { id: String(id) },
+      params: { id },
     })
   }
 

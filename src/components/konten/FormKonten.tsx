@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, FormProvider } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { CalendarIcon, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -32,54 +32,45 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import {
-  createContentSchema,
-  updateContentSchema,
   platformEnum,
-  schedulingModeEnum,
   type ContentRow,
   type Platform,
-  type SchedulingMode,
-  type Status,
 } from '@/server/modules/contents/contents-schema'
-import {
-  STATUS_FOR_INTENT,
-  type CreateIntent,
-} from '@/server/modules/contents/contents-state-machine'
 import {
   createContent,
   updateContent,
-} from '@/server/modules/contents/contents-mock-store'
+} from '@/server/modules/contents/contents-repositories'
 import { MediaUploader } from './MediaUploader'
 import { PreviewSwitcher } from './PreviewSwitcher'
 import { PlatformChecklist } from './PlatformChecklist'
+import { AICaptionDialog } from './AICaptionDialog'
 import { roundUpToNextHour } from '@/lib/konten-utils'
 
-// Schema yang di-resolve untuk form (sama dengan createContentSchema, tapi
-// tanpa `.default()` agar inisial form lebih predictable).
+// Form schema — local validation
 const formSchemaCreate = z
   .object({
-    caption: z.string().max(5000).nullable().optional(),
-    platforms: z
+    captions: z.string().max(5000).nullable().optional(),
+    social_media: z
       .array(platformEnum)
       .min(1, 'Pilih minimal 1 platform')
       .max(4),
-    product_id: z.number().int().positive().nullable().optional(),
-    media_urls: z.array(z.string()).max(10),
-    scheduling_mode: schedulingModeEnum,
-    scheduled_at: z.string().optional(),
+    product_id: z.string().nullable().optional(),
+    image_urls: z.array(z.string()).max(10),
+    scheduling_mode: z.enum(['custom_time', 'asap']),
+    schedule: z.string().optional(),
   })
   .superRefine((v, ctx) => {
     if (v.scheduling_mode === 'custom_time') {
-      if (!v.scheduled_at) {
+      if (!v.schedule) {
         ctx.addIssue({
           code: 'custom',
-          path: ['scheduled_at'],
+          path: ['schedule'],
           message: 'Tanggal dan jam wajib dipilih',
         })
-      } else if (new Date(v.scheduled_at).getTime() < Date.now()) {
+      } else if (new Date(v.schedule).getTime() < Date.now()) {
         ctx.addIssue({
           code: 'custom',
-          path: ['scheduled_at'],
+          path: ['schedule'],
           message: 'Tanggal dan jam tidak boleh di masa lalu',
         })
       }
@@ -104,22 +95,22 @@ function buildDefaults(
 ): FormShape {
   if (mode === 'edit' && initialContent) {
     return {
-      caption: initialContent.caption,
-      platforms: initialContent.platforms,
+      captions: initialContent.captions,
+      social_media: initialContent.social_media,
       product_id: initialContent.product_id,
-      media_urls: initialContent.media_urls,
-      scheduling_mode: initialContent.scheduling_mode,
-      scheduled_at: initialContent.scheduled_at,
+      image_urls: initialContent.image_urls,
+      scheduling_mode: 'custom_time',
+      schedule: initialContent.schedule ?? undefined,
     }
   }
   const slot = prefillSlot ?? roundUpToNextHour()
   return {
-    caption: '',
-    platforms: ['instagram'],
+    captions: '',
+    social_media: ['instagram'],
     product_id: null,
-    media_urls: [],
+    image_urls: [],
     scheduling_mode: 'custom_time',
-    scheduled_at: slot.toISOString(),
+    schedule: slot.toISOString(),
   }
 }
 
@@ -131,9 +122,15 @@ export function FormKonten({
   onSuccess,
   onDirtyChange,
 }: FormKontenProps) {
+  // Pakai dep primitive supaya defaults tidak ke-recompute hanya karena
+  // parent membuat object/Date baru pada tiap render. Reset form hanya saat
+  // benar-benar ganti konten (mis. navigasi prev/next di halaman edit).
+  const prefillSlotMs = prefillSlot?.getTime()
+  const initialContentId = initialContent?.id
   const defaults = React.useMemo(
     () => buildDefaults(mode, prefillSlot, initialContent),
-    [mode, prefillSlot, initialContent],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, prefillSlotMs, initialContentId],
   )
 
   const form = useForm<FormShape>({
@@ -142,10 +139,11 @@ export function FormKonten({
     mode: 'onSubmit',
   })
 
-  // sync defaults saat berpindah konten dalam halaman edit
+  // Reset form hanya saat ganti konten / mode, BUKAN tiap render.
   React.useEffect(() => {
     form.reset(defaults)
-  }, [defaults, form])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, prefillSlotMs, initialContentId])
 
   // expose dirty flag ke parent (untuk unsaved-changes guard)
   const isDirty = form.formState.isDirty
@@ -153,33 +151,30 @@ export function FormKonten({
     onDirtyChange?.(isDirty)
   }, [isDirty, onDirtyChange])
 
-  const [intent, setIntent] = React.useState<CreateIntent>('schedulePost')
   const [submitting, setSubmitting] = React.useState(false)
 
-  const watchedPlatforms = form.watch('platforms') as Platform[]
-  const watchedMedia = form.watch('media_urls') as string[]
-  const watchedCaption = form.watch('caption')
-  const watchedMode = form.watch('scheduling_mode') as SchedulingMode
-  const watchedScheduledAt = form.watch('scheduled_at')
+  const watchedPlatforms = form.watch('social_media') as Platform[]
+  const watchedMedia = form.watch('image_urls') as string[]
+  const watchedCaption = form.watch('captions')
+  const watchedMode = form.watch('scheduling_mode')
+  const watchedScheduledAt = form.watch('schedule')
 
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true)
     try {
       if (mode === 'create') {
         const payload = {
-          caption: values.caption ?? null,
-          platforms: values.platforms,
+          captions: values.captions ?? null,
+          social_media: values.social_media,
           product_id: values.product_id ?? null,
-          media_urls: values.media_urls.filter((u) => u.length > 0),
-          scheduling_mode: values.scheduling_mode,
-          scheduled_at:
+          image_urls: values.image_urls.filter((u) => u.length > 0),
+          schedule:
             values.scheduling_mode === 'asap'
               ? new Date().toISOString()
-              : values.scheduled_at,
-          status: STATUS_FOR_INTENT[intent] as Status,
+              : (values.schedule ?? null),
+          status: false,
         }
-        const parsed = createContentSchema.parse(payload)
-        const created = await createContent(parsed, intent)
+        const created = await createContent(payload)
         toast.success('Konten berhasil dibuat')
         onSuccess(created)
         return
@@ -188,24 +183,22 @@ export function FormKonten({
       if (!initialContent) return
       const patch = {
         id: initialContent.id,
-        caption: values.caption ?? null,
-        platforms: values.platforms,
+        captions: values.captions ?? null,
+        social_media: values.social_media,
         product_id: values.product_id ?? null,
-        media_urls: values.media_urls,
-        scheduling_mode: values.scheduling_mode,
-        scheduled_at: values.scheduled_at ?? initialContent.scheduled_at,
+        image_urls: values.image_urls,
+        schedule: values.schedule ?? initialContent.schedule,
       }
-      const parsed = updateContentSchema.parse(patch)
-      const updated = await updateContent(parsed)
+      const updated = await updateContent(patch)
       toast.success('Konten berhasil diperbarui')
       onSuccess(updated)
       form.reset({
-        caption: updated.caption,
-        platforms: updated.platforms,
+        captions: updated.captions,
+        social_media: updated.social_media,
         product_id: updated.product_id,
-        media_urls: updated.media_urls,
-        scheduling_mode: updated.scheduling_mode,
-        scheduled_at: updated.scheduled_at,
+        image_urls: updated.image_urls,
+        scheduling_mode: 'custom_time',
+        schedule: updated.schedule ?? undefined,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Gagal menyimpan konten'
@@ -232,12 +225,12 @@ export function FormKonten({
                   form.setValue('scheduling_mode', m, { shouldDirty: true })
                 }
                 onScheduledAtChange={(iso) =>
-                  form.setValue('scheduled_at', iso, {
+                  form.setValue('schedule', iso, {
                     shouldDirty: true,
                     shouldValidate: true,
                   })
                 }
-                error={form.formState.errors.scheduled_at?.message}
+                error={form.formState.errors.schedule?.message}
               />
             </SectionCard>
 
@@ -247,14 +240,14 @@ export function FormKonten({
             >
               <FormField
                 control={form.control}
-                name="media_urls"
+                name="image_urls"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <MediaUploader
                         value={field.value as string[]}
                         onChange={(next) =>
-                          form.setValue('media_urls', next, {
+                          form.setValue('image_urls', next, {
                             shouldDirty: true,
                           })
                         }
@@ -270,11 +263,24 @@ export function FormKonten({
             <SectionCard
               title="Konten"
               description="Tulis caption dan pilih platform tujuan."
+              action={
+                <AICaptionDialog
+                  selectedPlatforms={watchedPlatforms ?? []}
+                  currentCaption={watchedCaption}
+                  onApply={(text) =>
+                    form.setValue('captions', text, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={submitting}
+                />
+              }
             >
               <div className="flex flex-col gap-5">
                 <FormField
                   control={form.control}
-                  name="caption"
+                  name="captions"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Caption</FormLabel>
@@ -297,7 +303,7 @@ export function FormKonten({
 
                 <FormField
                   control={form.control}
-                  name="platforms"
+                  name="social_media"
                   render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Platform</FormLabel>
@@ -305,7 +311,7 @@ export function FormKonten({
                         <PlatformChecklist
                           value={field.value as Platform[]}
                           onChange={(next) =>
-                            form.setValue('platforms', next, {
+                            form.setValue('social_media', next, {
                               shouldDirty: true,
                               shouldValidate: true,
                             })
@@ -331,7 +337,7 @@ export function FormKonten({
                             field.value == null ? 'none' : String(field.value)
                           }
                           onValueChange={(v) =>
-                            field.onChange(v === 'none' ? null : Number(v))
+                            field.onChange(v === 'none' ? null : v)
                           }
                           disabled={submitting}
                         >
@@ -372,40 +378,14 @@ export function FormKonten({
         {/* Action footer */}
         <div className="sticky bottom-0 -mx-6 flex flex-wrap items-center justify-end gap-2 border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           {mode === 'create' ? (
-            <>
-              <Button
-                type="submit"
-                variant="ghost"
-                onClick={() => setIntent('saveAsDraft')}
-                disabled={submitting}
-                className="cursor-pointer"
-              >
-                Save as draft
-              </Button>
-              <Button
-                type="submit"
-                variant="secondary"
-                onClick={() => setIntent('submitForApproval')}
-                disabled={submitting}
-                className="cursor-pointer"
-              >
-                {submitting && intent === 'submitForApproval' ? (
-                  <Spinner className="size-4" />
-                ) : null}
-                Submit for approval
-              </Button>
-              <Button
-                type="submit"
-                onClick={() => setIntent('schedulePost')}
-                disabled={submitting}
-                className="cursor-pointer"
-              >
-                {submitting && intent === 'schedulePost' ? (
-                  <Spinner className="size-4" />
-                ) : null}
-                Schedule Post
-              </Button>
-            </>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="cursor-pointer"
+            >
+              {submitting ? <Spinner className="size-4" /> : null}
+              Jadwalkan Konten
+            </Button>
           ) : (
             <Button
               type="submit"
@@ -413,7 +393,7 @@ export function FormKonten({
               className="cursor-pointer"
             >
               {submitting ? <Spinner className="size-4" /> : null}
-              Save
+              Simpan
             </Button>
           )}
         </div>
@@ -426,19 +406,24 @@ export function FormKonten({
 function SectionCard({
   title,
   description,
+  action,
   children,
 }: {
   title: string
   description?: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section className="rounded-xl border bg-card p-5 shadow-xs">
-      <header className="mb-4 flex flex-col gap-1">
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+          {description && (
+            <p className="text-xs text-muted-foreground">{description}</p>
+          )}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
       </header>
       {children}
     </section>
@@ -453,9 +438,9 @@ function SectionDateTime({
   onScheduledAtChange,
   error,
 }: {
-  mode: SchedulingMode
+  mode: 'custom_time' | 'asap'
   scheduledAt: string | undefined
-  onModeChange: (m: SchedulingMode) => void
+  onModeChange: (m: 'custom_time' | 'asap') => void
   onScheduledAtChange: (iso: string) => void
   error?: string
 }) {
@@ -484,7 +469,7 @@ function SectionDateTime({
     <div className="flex flex-col gap-3">
       <Tabs
         value={mode}
-        onValueChange={(v) => onModeChange(v as SchedulingMode)}
+        onValueChange={(v) => onModeChange(v as 'custom_time' | 'asap')}
       >
         <TabsList>
           <TabsTrigger value="custom_time">Custom time</TabsTrigger>
@@ -545,6 +530,3 @@ export function isoFromDateAndTime(date: Date, time: string): string {
   next.setHours(hh ?? 0, mm ?? 0, 0, 0)
   return next.toISOString()
 }
-
-// referenced to avoid unused import after refactor
-export const __forceImport = parseISO

@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 // Empty state ketika user belum punya konten apapun (R12.3).
 export function EmptyStateKalendar({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div className="flex flex-1 flex-col items-center justify-center p-8">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
         <div className="flex size-16 items-center justify-center rounded-full bg-accent text-accent-foreground">
           <CalendarX2 className="size-8" />

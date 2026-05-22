@@ -7,7 +7,7 @@ import {
   isValid,
   format,
 } from 'date-fns'
-import type { ContentRow, Platform, Status } from '@/server/modules/contents/contents-schema'
+import type { ContentRow, Platform } from '@/server/modules/contents/contents-schema'
 
 // ---------- Week range ----------
 // Sunday → Saturday (weekStartsOn: 0).
@@ -37,15 +37,18 @@ export function placeCards(
   contents: ContentRow[],
   weekStart: Date,
 ): Map<SlotKey, ContentRow[]> {
-  // pre-sort by scheduled_at ASC (R2.10 stacking order is deterministic).
   const sorted = [...contents].sort(
-    (a, b) =>
-      new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+    (a, b) => {
+      const tA = a.schedule ? new Date(a.schedule).getTime() : 0
+      const tB = b.schedule ? new Date(b.schedule).getTime() : 0
+      return tA - tB
+    },
   )
   const result = new Map<SlotKey, ContentRow[]>()
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   for (const content of sorted) {
-    const date = new Date(content.scheduled_at)
+    if (!content.schedule) continue
+    const date = new Date(content.schedule)
     const dayIndex = days.findIndex((d) => isSameDay(d, date))
     if (dayIndex === -1) continue
     const hour = date.getHours()
@@ -60,15 +63,15 @@ export function placeCards(
 // ---------- Filters ----------
 export function applyFilters(
   contents: ContentRow[],
-  platforms: Platform[] | undefined,
-  status: Status | undefined,
+  social_media: Platform[] | undefined,
+  status: boolean | undefined,
 ): ContentRow[] {
   return contents.filter((c) => {
-    if (platforms && platforms.length > 0) {
-      const hit = c.platforms.some((p) => platforms.includes(p))
+    if (social_media && social_media.length > 0) {
+      const hit = c.social_media.some((p) => social_media.includes(p))
       if (!hit) return false
     }
-    if (status && c.status !== status) return false
+    if (status !== undefined && c.status !== status) return false
     return true
   })
 }
@@ -127,12 +130,9 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
   twitter: 'Twitter',
 }
 
-export const STATUS_LABELS: Record<Status, string> = {
-  draft: 'Draft',
-  waiting_approval: 'Waiting Approval',
-  approved: 'Approved',
-  scheduled: 'Scheduled',
-  published: 'Published',
+export const STATUS_LABELS: Record<string, string> = {
+  'false': 'Dijadwalkan',
+  'true': 'Diposting',
 }
 
 export const HARI_INDONESIA = [

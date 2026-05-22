@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { PLATFORM_LABELS, STATUS_LABELS } from '@/lib/konten-utils'
-import type { ContentRow, Status } from '@/server/modules/contents/contents-schema'
+import type { ContentRow } from '@/server/modules/contents/contents-schema'
 import {
   deleteContent,
   emit,
@@ -32,7 +32,7 @@ import {
   getContentById,
   subscribe,
   updateContentStatus,
-} from '@/server/modules/contents/contents-mock-store'
+} from '@/server/modules/contents/contents-repositories'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
 import { useContentNavigation } from '@/hooks/use-content-navigation'
 import { FormKonten } from './FormKonten'
@@ -41,7 +41,7 @@ import { PlatformIcon } from './platform-icons'
 
 export type KontenDetailPageProps = {
   mode: 'create' | 'edit'
-  contentId?: number
+  contentId?: string
   prefillIso?: string
   username: string
 }
@@ -63,7 +63,14 @@ export function KontenDetailPage({
 
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
-  const [transitioning, setTransitioning] = React.useState<Status | null>(null)
+  const [transitioning, setTransitioning] = React.useState<boolean | null>(null)
+
+  // Stabilkan reference Date supaya tidak memicu form.reset di FormKonten
+  // tiap parent re-render. Hooks WAJIB di atas semua early return.
+  const prefillSlot = React.useMemo(
+    () => (prefillIso ? new Date(prefillIso) : undefined),
+    [prefillIso],
+  )
 
   // Fetch konten saat mount / id berubah
   const fetchContent = React.useCallback(async () => {
@@ -97,11 +104,11 @@ export function KontenDetailPage({
 
   const sortedList = React.useMemo(
     () =>
-      [...allContents].sort(
-        (a, b) =>
-          new Date(a.scheduled_at).getTime() -
-          new Date(b.scheduled_at).getTime(),
-      ),
+      [...allContents].sort((a, b) => {
+        const tA = a.schedule ? new Date(a.schedule).getTime() : 0
+        const tB = b.schedule ? new Date(b.schedule).getTime() : 0
+        return tA - tB
+      }),
     [allContents],
   )
 
@@ -113,11 +120,11 @@ export function KontenDetailPage({
     })
   }
 
-  const goToContent = (id: number) => {
+  const goToContent = (id: string) => {
     guard.requestClose(() => {
       void navigate({
         to: '/konten/$id',
-        params: { id: String(id) },
+        params: { id },
       })
     })
   }
@@ -147,22 +154,15 @@ export function KontenDetailPage({
     }
   }
 
-  const handleTransition = async (next: Status) => {
+  const handleTransition = async (next: boolean) => {
     if (!content) return
     setTransitioning(next)
     try {
       const updated = await updateContentStatus(content.id, next)
       setContent(updated)
-      const successMsg =
-        next === 'approved'
-          ? 'Konten disetujui'
-          : next === 'draft'
-            ? 'Konten dikembalikan ke draft'
-            : next === 'scheduled'
-              ? 'Konten dijadwalkan'
-              : next === 'published'
-                ? 'Konten ditandai sebagai published'
-                : 'Status diperbarui'
+      const successMsg = next
+        ? 'Konten ditandai sebagai diposting'
+        : 'Konten dijadwalkan kembali'
       toast.success(successMsg)
       emit()
     } catch (err) {
@@ -175,7 +175,6 @@ export function KontenDetailPage({
 
   const handleSuccess = (next: ContentRow) => {
     if (mode === 'create') {
-      // Setelah create, redirect ke list
       emit()
       void navigate({ to: '/konten' })
       return
@@ -217,7 +216,6 @@ export function KontenDetailPage({
   }
 
   const isEdit = mode === 'edit' && content != null
-  const prefillSlot = prefillIso ? new Date(prefillIso) : undefined
 
   return (
     <div className="flex flex-1 flex-col">
@@ -242,27 +240,29 @@ export function KontenDetailPage({
                 <span
                   className={cn(
                     'inline-block size-1.5 rounded-full',
-                    STATUS_DOT_CLASS[content.status],
+                    STATUS_DOT_CLASS[String(content.status)],
                   )}
                 />
                 <span className="font-medium uppercase tracking-wide">
-                  {STATUS_LABELS[content.status]}
+                  {STATUS_LABELS[String(content.status)]}
                 </span>
               </span>
               <span>·</span>
               <span className="inline-flex items-center gap-1">
-                {content.platforms.map((p) => (
+                {content.social_media.map((p) => (
                   <PlatformIcon key={p} platform={p} className="size-3" />
                 ))}
                 <span className="ml-1">
-                  {content.platforms
+                  {content.social_media
                     .map((p) => PLATFORM_LABELS[p])
                     .join(', ')}
                 </span>
               </span>
               <span>·</span>
               <span>
-                {format(new Date(content.scheduled_at), 'd MMM yyyy, HH:mm')}
+                {content.schedule
+                  ? format(new Date(content.schedule), 'd MMM yyyy, HH:mm')
+                  : '-'}
               </span>
             </div>
           )}
@@ -322,7 +322,7 @@ export function KontenDetailPage({
                 Tindakan status
               </h3>
               <p className="text-xs text-muted-foreground">
-                Lanjutkan alur konten sesuai status saat ini.
+                Ubah status konten ini.
               </p>
             </header>
             <TransitionActions
@@ -404,77 +404,37 @@ function TransitionActions({
   onTransition,
   pending,
 }: {
-  status: Status
-  onTransition: (next: Status) => void
-  pending: Status | null
+  status: boolean
+  onTransition: (next: boolean) => void
+  pending: boolean | null
 }) {
-  const isPending = (s: Status) => pending === s
-  switch (status) {
-    case 'waiting_approval':
-      return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            disabled={pending !== null}
-            onClick={() => onTransition('draft')}
-            className="cursor-pointer"
-          >
-            {isPending('draft') ? <Spinner className="size-4" /> : null}
-            Reject
-          </Button>
-          <Button
-            disabled={pending !== null}
-            onClick={() => onTransition('approved')}
-            className="cursor-pointer"
-          >
-            {isPending('approved') ? <Spinner className="size-4" /> : null}
-            Approve
-          </Button>
-        </div>
-      )
-    case 'approved':
-      return (
-        <div className="flex justify-end">
-          <Button
-            disabled={pending !== null}
-            onClick={() => onTransition('scheduled')}
-            className="cursor-pointer"
-          >
-            {isPending('scheduled') ? <Spinner className="size-4" /> : null}
-            Schedule
-          </Button>
-        </div>
-      )
-    case 'scheduled':
-      return (
-        <div className="flex justify-end">
-          <Button
-            disabled={pending !== null}
-            onClick={() => onTransition('published')}
-            className="cursor-pointer"
-          >
-            {isPending('published') ? <Spinner className="size-4" /> : null}
-            Mark as Published
-          </Button>
-        </div>
-      )
-    case 'draft':
-      return (
-        <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            disabled={pending !== null}
-            onClick={() => onTransition('waiting_approval')}
-            className="cursor-pointer"
-          >
-            {isPending('waiting_approval') ? (
-              <Spinner className="size-4" />
-            ) : null}
-            Submit for approval
-          </Button>
-        </div>
-      )
-    default:
-      return null
+  const isPending = (s: boolean) => pending === s
+  if (status === false) {
+    return (
+      <div className="flex justify-end">
+        <Button
+          disabled={pending !== null}
+          onClick={() => onTransition(true)}
+          className="cursor-pointer"
+        >
+          {isPending(true) ? <Spinner className="size-4" /> : null}
+          Tandai Diposting
+        </Button>
+      </div>
+    )
+  } else {
+    return (
+      <div className="flex justify-end">
+        <Button
+          variant="secondary"
+          disabled={pending !== null}
+          onClick={() => onTransition(false)}
+          className="cursor-pointer"
+        >
+          {isPending(false) ? <Spinner className="size-4" /> : null}
+          Jadwalkan Kembali
+        </Button>
+      </div>
+    )
   }
 }

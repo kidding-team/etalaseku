@@ -16,10 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useKontenFilters } from '@/hooks/use-konten-filters'
 import { formatWeekLabel } from '@/lib/konten-utils'
-import type {
-  Platform,
-  Status,
-} from '@/server/modules/contents/contents-schema'
+import type { Platform } from '@/server/modules/contents/contents-schema'
 import { PlatformIcon } from './platform-icons'
 import { cn } from '@/lib/utils'
 
@@ -41,7 +38,7 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
     goToNextWeek,
   } = useKontenFilters()
 
-  const statusValue: Status | 'all' = status ?? 'all'
+  const statusValue = status === undefined ? 'all' : String(status)
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-b bg-background/50 px-4 py-3">
@@ -95,7 +92,7 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
       </Select>
 
       <div className="ml-auto flex flex-wrap items-center gap-3">
-        {/* Platform toggles (R4.1, R4.3) */}
+        {/* Platform toggles */}
         <div className="flex items-center gap-1">
           {PLATFORMS.map((p) => {
             const active = platforms.includes(p)
@@ -127,18 +124,15 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
         {/* Status filter */}
         <Select
           value={statusValue}
-          onValueChange={(v) => setStatus(v as Status | 'all')}
+          onValueChange={(v) => setStatus(v === 'all' ? 'all' : v === 'true')}
         >
           <SelectTrigger size="sm" className="w-[170px]">
-            <SelectValue placeholder="All status" />
+            <SelectValue placeholder="Semua status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="waiting_approval">Waiting Approval</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
+            <SelectItem value="all">Semua status</SelectItem>
+            <SelectItem value="false">Dijadwalkan</SelectItem>
+            <SelectItem value="true">Diposting</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -146,7 +140,7 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
   )
 }
 
-// SelectItem yang disabled + tooltip "Tersedia di versi mendatang" (R3.7).
+// SelectItem yang disabled + tooltip "Tersedia di versi mendatang".
 function DisabledFutureItem({
   value,
   label,

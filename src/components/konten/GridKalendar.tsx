@@ -24,7 +24,7 @@ export type GridKalendarProps = {
   isLoading: boolean
   error: string | null
   onRetry: () => void
-  onCardClick: (id: number) => void
+  onCardClick: (id: string) => void
   onSlotClick: (date: Date, hour: number) => void
   onCreateFirst: () => void
   totalCountAcrossAccount: number
@@ -61,6 +61,10 @@ export function GridKalendar({
         <KalendarErrorState message={error} onRetry={onRetry} />
       </div>
     )
+  }
+
+  if (!isLoading && totalCountAcrossAccount === 0) {
+    return <EmptyStateKalendar onCreate={onCreateFirst} />
   }
 
   return (
@@ -160,14 +164,8 @@ export function GridKalendar({
       </div>
 
       {/* Overlay states (di atas grid) */}
-      {!isLoading && !error && contents.length === 0 && (
-        <>
-          {totalCountAcrossAccount === 0 ? (
-            <EmptyStateKalendar onCreate={onCreateFirst} />
-          ) : hasActiveFilters ? (
-            <NoFilterMatchOverlay />
-          ) : null}
-        </>
+      {!isLoading && !error && contents.length === 0 && hasActiveFilters && (
+        <NoFilterMatchOverlay />
       )}
     </div>
   )

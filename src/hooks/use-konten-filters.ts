@@ -4,7 +4,7 @@ import {
   useNavigate,
   useSearch,
 } from '@tanstack/react-router'
-import type { Platform, Status } from '@/server/modules/contents/contents-schema'
+import type { Platform } from '@/server/modules/contents/contents-schema'
 import type { KontenSearch } from '@/server/modules/contents/contents-schema'
 
 const FROM = '/_authenticated/konten/' as const
@@ -20,7 +20,7 @@ export function useKontenFilters() {
   const navigate = useNavigate()
 
   const platforms = (search.platforms ?? []) as Platform[]
-  const status = search.status as Status | undefined
+  const status = search.status as boolean | undefined
   const weekStart = (search.weekStart as string | undefined) ?? undefined
 
   const setSearch = React.useCallback(
@@ -34,7 +34,7 @@ export function useKontenFilters() {
           if (next.weekStart) out.weekStart = next.weekStart
           if (next.platforms && next.platforms.length > 0)
             out.platforms = next.platforms
-          if (next.status) out.status = next.status
+          if (next.status !== undefined) out.status = next.status
           return out
         },
         replace: false,
@@ -57,7 +57,7 @@ export function useKontenFilters() {
   )
 
   const setStatus = React.useCallback(
-    (s: Status | 'all') => {
+    (s: boolean | 'all') => {
       setSearch((prev) => ({
         ...prev,
         status: s === 'all' ? undefined : s,
