@@ -15,10 +15,10 @@ export function BottomCTASection() {
         className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-4xl relative z-10"
       >
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8 leading-tight">
-          Siap Membawa Komponen Produk Anda Jauh Lebih Mudah?
+          Siap Mememaksimalkan Potensi Penjualan Anda?
         </h2>
         <p className="text-zinc-400 text-lg mb-10 max-w-2xl mx-auto">
-          Bergabunglah dengan ribuan pelaku usaha yang telah membuktikan peningkatan efisiensi dan penjualan mereka bersama EtalaseKu.
+          Mari mulai perjalanan bisnis yang lebih baik bersama EtalaseKu
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button asChild size="lg" className="rounded-full px-8 bg-white text-zinc-950 hover:bg-zinc-200">
