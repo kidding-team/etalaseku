@@ -1,3 +1,4 @@
+import { Button } from '#/components/ui/button'
 import { createFileRoute, Link } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({ component: Home })
@@ -12,6 +13,7 @@ function Home() {
         <p className="mb-8 text-base text-[var(--sea-ink-soft)] sm:text-lg max-w-2xl mx-auto">
           This is the public landing page. More content coming soon!
         </p>
+        <Button>Hello</Button>
         <div className="flex flex-wrap justify-center gap-3">
           <Link
             to="/login"
