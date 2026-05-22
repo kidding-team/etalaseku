@@ -16,12 +16,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugIndexRouteImport } from './routes/$slug/index'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
+import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as SlugLinktreeRouteImport } from './routes/$slug/linktree'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
 import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
 import { Route as AuthenticatedKontenIdRouteImport } from './routes/_authenticated/konten/$id'
 import { Route as SlugProdukProductIdRouteImport } from './routes/$slug/produk/$productId'
+import { Route as AuthenticatedConnectMetaCallbackRouteImport } from './routes/_authenticated/connect/meta/callback'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -58,6 +60,12 @@ const AuthenticatedLandingPageRoute =
     path: '/landing-page',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIntegrationsRoute =
+  AuthenticatedIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -89,6 +97,12 @@ const SlugProdukProductIdRoute = SlugProdukProductIdRouteImport.update({
   path: '/$slug/produk/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConnectMetaCallbackRoute =
+  AuthenticatedConnectMetaCallbackRouteImport.update({
+    id: '/connect/meta/callback',
+    path: '/connect/meta/callback',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/$slug/linktree': typeof SlugLinktreeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/$slug/': typeof SlugIndexRoute
@@ -103,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten/': typeof AuthenticatedKontenIndexRoute
+  '/connect/meta/callback': typeof AuthenticatedConnectMetaCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +126,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/$slug/linktree': typeof SlugLinktreeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/$slug': typeof SlugIndexRoute
@@ -117,6 +134,7 @@ export interface FileRoutesByTo {
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten': typeof AuthenticatedKontenIndexRoute
+  '/connect/meta/callback': typeof AuthenticatedConnectMetaCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,6 +144,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/$slug/linktree': typeof SlugLinktreeRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/landing-page': typeof AuthenticatedLandingPageRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/$slug/': typeof SlugIndexRoute
@@ -133,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
+  '/_authenticated/connect/meta/callback': typeof AuthenticatedConnectMetaCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -142,6 +162,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/$slug/linktree'
     | '/dashboard'
+    | '/integrations'
     | '/landing-page'
     | '/products'
     | '/$slug/'
@@ -149,6 +170,7 @@ export interface FileRouteTypes {
     | '/konten/$id'
     | '/konten/baru'
     | '/konten/'
+    | '/connect/meta/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -156,6 +178,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/$slug/linktree'
     | '/dashboard'
+    | '/integrations'
     | '/landing-page'
     | '/products'
     | '/$slug'
@@ -163,6 +186,7 @@ export interface FileRouteTypes {
     | '/konten/$id'
     | '/konten/baru'
     | '/konten'
+    | '/connect/meta/callback'
   id:
     | '__root__'
     | '/'
@@ -171,6 +195,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/$slug/linktree'
     | '/_authenticated/dashboard'
+    | '/_authenticated/integrations'
     | '/_authenticated/landing-page'
     | '/_authenticated/products'
     | '/$slug/'
@@ -178,6 +203,7 @@ export interface FileRouteTypes {
     | '/_authenticated/konten/$id'
     | '/_authenticated/konten/baru'
     | '/_authenticated/konten/'
+    | '/_authenticated/connect/meta/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integrations': {
+      id: '/_authenticated/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -283,25 +316,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugProdukProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/connect/meta/callback': {
+      id: '/_authenticated/connect/meta/callback'
+      path: '/connect/meta/callback'
+      fullPath: '/connect/meta/callback'
+      preLoaderRoute: typeof AuthenticatedConnectMetaCallbackRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedLandingPageRoute: typeof AuthenticatedLandingPageRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
   AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
   AuthenticatedKontenIndexRoute: typeof AuthenticatedKontenIndexRoute
+  AuthenticatedConnectMetaCallbackRoute: typeof AuthenticatedConnectMetaCallbackRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedLandingPageRoute: AuthenticatedLandingPageRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
   AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
   AuthenticatedKontenIndexRoute: AuthenticatedKontenIndexRoute,
+  AuthenticatedConnectMetaCallbackRoute: AuthenticatedConnectMetaCallbackRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

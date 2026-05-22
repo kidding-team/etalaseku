@@ -46,6 +46,21 @@ import { PlatformChecklist } from './PlatformChecklist'
 import { AICaptionDialog } from './AICaptionDialog'
 import { roundUpToNextHour } from '@/lib/konten-utils'
 import { supabase } from '@/lib/supabase'
+import { publishContentNow } from '@/server/modules/meta-publish/meta-publish-controller'
+import type {
+  PerPlatformResult,
+  PublishPlatform,
+} from '@/server/modules/meta-publish/meta-publish-schema'
+import { getAccessToken } from '@/lib/auth-client'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Share2, CheckCircle2, XCircle } from 'lucide-react'
 
 // Form schema — local validation
 const formSchemaCreate = z
@@ -153,6 +168,48 @@ export function FormKonten({
   }, [isDirty, onDirtyChange])
 
   const [submitting, setSubmitting] = React.useState(false)
+  const [publishing, setPublishing] = React.useState(false)
+  const [publishResults, setPublishResults] = React.useState<PerPlatformResult[] | null>(null)
+
+  const handlePublishToMeta = async () => {
+    const values = form.getValues()
+    const selected = (values.social_media as Platform[]) ?? []
+    const metaPlatforms: PublishPlatform[] = []
+    if (selected.includes('facebook')) metaPlatforms.push('facebook_page')
+    if (selected.includes('instagram')) metaPlatforms.push('instagram')
+    if (metaPlatforms.length === 0) {
+      toast.error('Pilih platform Facebook atau Instagram dulu di section "Platform".')
+      return
+    }
+    const media = (values.image_urls as string[]).filter((u) => u.length > 0)
+    if (metaPlatforms.includes('instagram') && media.length === 0) {
+      toast.error('Instagram butuh minimal 1 gambar.')
+      return
+    }
+    setPublishing(true)
+    setPublishResults(null)
+    try {
+      const accessToken = await getAccessToken()
+      const results = await publishContentNow({
+        data: {
+          accessToken,
+          caption: values.captions ?? '',
+          mediaUrls: media,
+          platforms: metaPlatforms,
+          contentId: initialContent?.id,
+        },
+      })
+      setPublishResults(results)
+      const anyFail = results.some((r) => r.status === 'failed')
+      if (anyFail) toast.error('Sebagian gagal publish. Lihat detail di dialog.')
+      else toast.success('Berhasil publish ke semua platform Meta')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`Gagal: ${msg}`)
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   const watchedPlatforms = form.watch('social_media') as Platform[]
   const watchedMedia = form.watch('image_urls') as string[]
@@ -385,6 +442,16 @@ export function FormKonten({
 
         {/* Action footer */}
         <div className="sticky bottom-0 -mx-6 flex flex-wrap items-center justify-end gap-2 border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePublishToMeta}
+            disabled={publishing || submitting}
+            className="cursor-pointer"
+          >
+            {publishing ? <Spinner className="size-4" /> : <Share2 className="size-4" />}
+            Publish ke Meta
+          </Button>
           {mode === 'create' ? (
             <Button
               type="submit"
@@ -406,7 +473,65 @@ export function FormKonten({
           )}
         </div>
       </form>
+      <PublishResultsDialog
+        results={publishResults}
+        onClose={() => setPublishResults(null)}
+      />
     </FormProvider>
+  )
+}
+
+function PublishResultsDialog({
+  results,
+  onClose,
+}: {
+  results: PerPlatformResult[] | null
+  onClose: () => void
+}) {
+  const open = results !== null
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Hasil Publish ke Meta</DialogTitle>
+          <DialogDescription>
+            Status per platform. External post ID dikembalikan Meta saat sukses.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          {(results ?? []).map((r) => (
+            <div
+              key={r.attemptId}
+              className="flex items-start gap-3 rounded-md border p-3 text-sm"
+            >
+              {r.status === 'published' ? (
+                <CheckCircle2 className="size-5 text-green-600" />
+              ) : (
+                <XCircle className="size-5 text-destructive" />
+              )}
+              <div className="space-y-0.5">
+                <div className="font-medium">
+                  {r.platform === 'facebook_page' ? 'Facebook Page' : 'Instagram'} — {r.status}
+                </div>
+                {r.externalPostId ? (
+                  <div className="text-xs text-muted-foreground break-all">
+                    Post ID: <span className="font-mono">{r.externalPostId}</span>
+                  </div>
+                ) : null}
+                {r.errorMessage ? (
+                  <div className="text-xs text-destructive break-all">{r.errorMessage}</div>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Tutup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

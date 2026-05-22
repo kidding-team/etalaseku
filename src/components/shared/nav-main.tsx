@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { LayoutDashboard, Package, FileText, Globe } from 'lucide-react'
+import { LayoutDashboard, Package, FileText, Globe, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   SidebarContent,
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: 'Produk', to: '/products', icon: Package },
   { label: 'Konten', to: '/konten', icon: FileText },
   { label: 'Landing Page', to: '/landing-page', icon: Globe },
+  { label: 'Integrations', to: '/integrations', icon: Link2 },
 ]
 
 export function NavMain({ ...props }: React.ComponentProps<typeof SidebarContent>) {
