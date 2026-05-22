@@ -11,6 +11,7 @@ import {
   MEDIA_REJECTION_MESSAGES,
 } from '@/lib/konten-utils'
 import { cn } from '@/lib/utils'
+import { uploadContentImage } from '@/server/modules/contents/upload'
 
 export type MediaUploaderProps = {
   value: string[]
@@ -23,34 +24,45 @@ type UploadingItem = {
   progress: number
 }
 
-// Mock uploader: untuk scope UI-only kita tidak benar-benar upload ke Supabase
-// Storage. File dibaca sebagai data URL untuk preview, dengan simulasi
-// progress 0→100 agar UX upload tampak realistis (R6.10, R12.5).
-function mockUpload(
-  file: File,
-  onProgress: (p: number) => void,
-): Promise<string> {
+// Baca file sebagai base64 (tanpa data: prefix) — sama persis dengan pola
+// di routes/_authenticated/products.tsx → handleImageUpload.
+function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(new Error('Gagal membaca file'))
     reader.onload = () => {
-      // simulate 0..100 progress in 600 ms
-      let p = 0
-      const tick = () => {
-        p += 20 + Math.random() * 20
-        if (p >= 100) {
-          onProgress(100)
-          resolve(reader.result as string)
-          return
-        }
-        onProgress(Math.min(99, Math.round(p)))
-        setTimeout(tick, 80)
-      }
-      onProgress(0)
-      setTimeout(tick, 80)
+      const result = reader.result as string
+      // result = "data:image/png;base64,XXXX..." → ambil bagian setelah koma
+      const base64 = result.split(',')[1] ?? ''
+      resolve(base64)
     }
     reader.readAsDataURL(file)
   })
+}
+
+// Upload via server function ke folder `public/uploads/`. Mengembalikan public URL
+// relatif (mis. `/uploads/abc123.png`) yang langsung dapat dipakai di <img src>.
+async function uploadFile(
+  file: File,
+  onProgress: (p: number) => void,
+): Promise<string> {
+  // Fake progress sambil menunggu upload selesai (server function tidak expose progress).
+  let p = 0
+  const tick = setInterval(() => {
+    p += 15
+    if (p < 95) onProgress(p)
+  }, 250)
+
+  try {
+    const base64 = await fileToBase64(file)
+    const result = await uploadContentImage({
+      data: { filename: file.name, base64 },
+    })
+    onProgress(100)
+    return result.url
+  } finally {
+    clearInterval(tick)
+  }
 }
 
 export function MediaUploader({
@@ -95,7 +107,7 @@ export function MediaUploader({
       accepted.map(async (file, idx) => {
         const item = items[idx]
         try {
-          const url = await mockUpload(file, (p) => {
+          const url = await uploadFile(file, (p) => {
             setUploading((prev) =>
               prev.map((u) => (u.id === item.id ? { ...u, progress: p } : u)),
             )

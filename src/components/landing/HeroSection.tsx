@@ -1,8 +1,14 @@
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
+import { useAuthStatus } from '@/hooks/use-auth-status'
 
 export function HeroSection() {
+  const { status } = useAuthStatus()
+  const isAuth = status === 'authenticated'
+  const ctaTo = isAuth ? '/dashboard' : '/login'
+  const ctaLabel = isAuth ? 'Buka Dashboard' : 'Mulai Coba Sekarang'
+
   return (
     <section className="relative overflow-hidden pb-16 md:pt-32 md:pb-24 bg-background min-h-[90vh] flex flex-col justify-center">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30"></div>
@@ -85,7 +91,7 @@ export function HeroSection() {
           className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight text-foreground mb-6 leading-[1.1] md:leading-[1.05]"
         >
           Kelola <em className="font-serif italic font-medium">Katalog</em> Bisnis <br className="hidden md:block" />
-          Anda dengan Cerdas
+          Anda dengan Efisien
         </motion.h1>
 
 
@@ -95,7 +101,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
           className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-medium"
         >
-          Platform manajemen produk dan pembuat caption otomatis menggunakan AI untuk memaksimalkan penjualan UMKM Anda.
+          Maksimalkan potensi penjualan Anda dengan AI untuk pemasaran yang lebih efisien dan efektif.
         </motion.p>
 
 
@@ -106,7 +112,7 @@ export function HeroSection() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10"
         >
           <Button asChild size="lg" className="rounded-full px-8 py-6 text-lg font-semibold w-full sm:w-auto shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1">
-            <Link to="/login">Mulai Coba Sekarang</Link>
+            <Link to={ctaTo}>{ctaLabel}</Link>
           </Button>
         </motion.div>
       </div>

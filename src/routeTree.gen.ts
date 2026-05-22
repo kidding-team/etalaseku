@@ -13,12 +13,15 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugIndexRouteImport } from './routes/$slug/index'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as SlugLinktreeRouteImport } from './routes/$slug/linktree'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
 import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
 import { Route as AuthenticatedKontenIdRouteImport } from './routes/_authenticated/konten/$id'
+import { Route as SlugProdukProductIdRouteImport } from './routes/$slug/produk/$productId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -39,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SlugIndexRoute = SlugIndexRouteImport.update({
+  id: '/$slug/',
+  path: '/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -54,6 +62,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const SlugLinktreeRoute = SlugLinktreeRouteImport.update({
+  id: '/$slug/linktree',
+  path: '/$slug/linktree',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedKontenIndexRoute =
   AuthenticatedKontenIndexRouteImport.update({
@@ -71,14 +84,22 @@ const AuthenticatedKontenIdRoute = AuthenticatedKontenIdRouteImport.update({
   path: '/konten/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const SlugProdukProductIdRoute = SlugProdukProductIdRouteImport.update({
+  id: '/$slug/produk/$productId',
+  path: '/$slug/produk/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/$slug/linktree': typeof SlugLinktreeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/$slug/': typeof SlugIndexRoute
+  '/$slug/produk/$productId': typeof SlugProdukProductIdRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten/': typeof AuthenticatedKontenIndexRoute
@@ -87,9 +108,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/$slug/linktree': typeof SlugLinktreeRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/$slug': typeof SlugIndexRoute
+  '/$slug/produk/$productId': typeof SlugProdukProductIdRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten': typeof AuthenticatedKontenIndexRoute
@@ -100,9 +124,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/$slug/linktree': typeof SlugLinktreeRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/landing-page': typeof AuthenticatedLandingPageRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
+  '/$slug/': typeof SlugIndexRoute
+  '/$slug/produk/$productId': typeof SlugProdukProductIdRoute
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
@@ -113,9 +140,12 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/login'
+    | '/$slug/linktree'
     | '/dashboard'
     | '/landing-page'
     | '/products'
+    | '/$slug/'
+    | '/$slug/produk/$productId'
     | '/konten/$id'
     | '/konten/baru'
     | '/konten/'
@@ -124,9 +154,12 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/login'
+    | '/$slug/linktree'
     | '/dashboard'
     | '/landing-page'
     | '/products'
+    | '/$slug'
+    | '/$slug/produk/$productId'
     | '/konten/$id'
     | '/konten/baru'
     | '/konten'
@@ -136,9 +169,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/about'
     | '/login'
+    | '/$slug/linktree'
     | '/_authenticated/dashboard'
     | '/_authenticated/landing-page'
     | '/_authenticated/products'
+    | '/$slug/'
+    | '/$slug/produk/$productId'
     | '/_authenticated/konten/$id'
     | '/_authenticated/konten/baru'
     | '/_authenticated/konten/'
@@ -149,6 +185,9 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
   LoginRoute: typeof LoginRoute
+  SlugLinktreeRoute: typeof SlugLinktreeRoute
+  SlugIndexRoute: typeof SlugIndexRoute
+  SlugProdukProductIdRoute: typeof SlugProdukProductIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -181,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$slug/': {
+      id: '/$slug/'
+      path: '/$slug'
+      fullPath: '/$slug/'
+      preLoaderRoute: typeof SlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/products': {
       id: '/_authenticated/products'
       path: '/products'
@@ -202,6 +248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/$slug/linktree': {
+      id: '/$slug/linktree'
+      path: '/$slug/linktree'
+      fullPath: '/$slug/linktree'
+      preLoaderRoute: typeof SlugLinktreeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/konten/': {
       id: '/_authenticated/konten/'
       path: '/konten'
@@ -222,6 +275,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/konten/$id'
       preLoaderRoute: typeof AuthenticatedKontenIdRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/$slug/produk/$productId': {
+      id: '/$slug/produk/$productId'
+      path: '/$slug/produk/$productId'
+      fullPath: '/$slug/produk/$productId'
+      preLoaderRoute: typeof SlugProdukProductIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -253,6 +313,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
   LoginRoute: LoginRoute,
+  SlugLinktreeRoute: SlugLinktreeRoute,
+  SlugIndexRoute: SlugIndexRoute,
+  SlugProdukProductIdRoute: SlugProdukProductIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

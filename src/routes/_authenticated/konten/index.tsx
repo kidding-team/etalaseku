@@ -13,9 +13,12 @@ export const Route = createFileRoute('/_authenticated/konten/')({
 
 function KontenIndexRouteComponent() {
   const search = Route.useSearch() as z.infer<typeof kontenSearchSchema>
+  // Backward compat: kalau hanya ada `weekStart`, treat sebagai date+week.
+  const dateIso = search.date ?? search.weekStart
   return (
     <KontenPage
-      weekStartIso={search.weekStart}
+      view={search.view}
+      dateIso={dateIso}
       platforms={search.platforms}
       status={search.status}
     />

@@ -12,6 +12,12 @@ export const getConfigByUserId = createServerFn({ method: 'GET' })
     return await websiteConfigService.getConfigByUserId(data.user_id)
   })
 
+export const getPublicSiteBySlug = createServerFn({ method: 'GET' })
+  .inputValidator((d: unknown) => d as { slug: string })
+  .handler(async ({ data }) => {
+    return await websiteConfigService.getPublicSiteBySlug(data.slug)
+  })
+
 export const upsertConfig = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => d as InsertWebsiteConfig & { id?: number })
   .handler(async ({ data }) => {

@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { Store } from 'lucide-react'
 import {
   SidebarHeader,
   SidebarMenu,
@@ -16,8 +15,7 @@ export function NavHeader({
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
             <Link to="/" className="text-primary">
-              <Store />
-              <span className="text-lg font-bold">Etalaseku</span>
+              <span className="text-2xl font-medium font-serif italic">EtalaseKu</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

@@ -19,31 +19,34 @@ export type Database = {
           captions: string | null
           created_at: string
           id: string
-          image_urls: string[]
+          image_urls: string[] | null
           product_id: string | null
           schedule: string | null
           social_media: string[] | null
           status: boolean | null
+          user_id: string | null
         }
         Insert: {
           captions?: string | null
           created_at?: string
           id?: string
-          image_urls: string[]
+          image_urls?: string[] | null
           product_id?: string | null
           schedule?: string | null
           social_media?: string[] | null
           status?: boolean | null
+          user_id?: string | null
         }
         Update: {
           captions?: string | null
           created_at?: string
           id?: string
-          image_urls?: string[]
+          image_urls?: string[] | null
           product_id?: string | null
           schedule?: string | null
           social_media?: string[] | null
           status?: boolean | null
+          user_id?: string | null
         }
         Relationships: [
           {

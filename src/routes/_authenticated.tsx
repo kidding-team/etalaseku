@@ -10,8 +10,6 @@ import { AppSidebar } from '@/components/shared/app-sidebar'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   SidebarInset,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
@@ -24,28 +22,34 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { supabase } from '@/lib/supabase'
-import { LayoutDashboard, Package, FileText, Globe } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
+import { useAuthStatus } from '@/hooks/use-auth-status'
 
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
 })
 
-const navItems = [
-  { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' as const },
-  { title: 'Produk', icon: Package, to: '/dashboard' as const },
-  { title: 'Konten', icon: FileText, to: '/konten' as const },
-  { title: 'Landing Page', icon: Globe, to: '/dashboard' as const },
-]
-
 function AuthenticatedLayout() {
   const router = useRouter()
+  const { status } = useAuthStatus()
 
   React.useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.navigate({ to: '/login' })
-    })
-  }, [router])
+    if (status === 'unauthenticated') {
+      void router.navigate({ to: '/login', replace: true })
+    }
+  }, [status, router])
+
+  // Belum tahu auth state → tampilkan loading penuh, jangan flash konten
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Sudah resolve & tidak login → null sambil redirect berjalan
+  if (status === 'unauthenticated') return null
 
   return (
     <SidebarProvider>
@@ -59,7 +63,7 @@ function AuthenticatedLayout() {
           </div>
           <ThemeToggle />
         </section>
-        <main className="h-full p-6">
+        <main className="flex flex-1 flex-col min-h-0 p-6">
           <Outlet />
         </main>
       </SidebarInset>
@@ -96,23 +100,5 @@ function DynamicBreadcrumb() {
         })}
       </BreadcrumbList>
     </Breadcrumb>
-  )
-}
-
-type NavItem = (typeof navItems)[number]
-
-function NavLinkItem({ item }: { item: NavItem }) {
-  const location = useLocation()
-  const isActive =
-    location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive}>
-        <Link to={item.to}>
-          <item.icon />
-          <span>{item.title}</span>
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
   )
 }

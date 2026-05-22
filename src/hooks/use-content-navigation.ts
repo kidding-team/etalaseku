@@ -8,11 +8,10 @@ export type NavigationResult = {
   isLast: boolean
 }
 
-// Pure hook: hitung prev/next id berdasarkan list yang sudah ter-sort
-// `scheduled_at ASC`. R7.8–R7.11.
+// Pure hook: hitung prev/next id berdasarkan list yang sudah ter-sort.
 export function useContentNavigation(
   list: ContentRow[],
-  currentId: number | null,
+  currentId: string | null,
 ): NavigationResult {
   return React.useMemo(() => {
     if (currentId == null || list.length === 0) {
