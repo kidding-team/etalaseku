@@ -1,1 +1,0 @@
-// repository: simpan data di memory, fungsi insert/find/update/delete

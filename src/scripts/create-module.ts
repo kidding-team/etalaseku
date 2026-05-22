@@ -13,7 +13,7 @@ if (!moduleName) {
 
 // Pastikan huruf kecil semua (biar konsisten)
 const normalizedName = moduleName.toLowerCase()
-const basePath = path.join('src', 'orpc', 'router', normalizedName)
+const basePath = path.join('src', 'server', 'modules', normalizedName)
 
 if (existsSync(basePath)) {
   console.error('! Module already exists!')
@@ -33,10 +33,12 @@ const files = {
 
 // Isi default untuk tiap file
 const content = {
-  controller: `// controller: handle request & response, panggil service`,
+  controller: `import { createServerFn } from '@tanstack/react-start'
+// controller: export server functions (createServerFn) to handle requests and call service methods`,
   service: `// service: panggil repository untuk CRUD logic`,
   repository: `// repository: simpan data di memory, fungsi insert/find/update/delete`,
-  schema: `// schema: validasi input pakai Zod`,
+  schema: `import { z } from 'zod'
+// schema: validasi input pakai Zod`,
 }
 
 // Buat semua file dengan konten default
@@ -46,5 +48,5 @@ for (const [key, filename] of Object.entries(files)) {
 }
 
 console.log(
-  `✅ Module '${normalizedName}' created successfully at src/orpc/router/${normalizedName}/`,
+  `✅ Module '${normalizedName}' created successfully at src/server/modules/${normalizedName}/`,
 )

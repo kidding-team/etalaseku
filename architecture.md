@@ -8,7 +8,7 @@
 | UI Library | React 19 |
 | Routing | TanStack Router (file-based) |
 | Styling | Tailwind CSS v4 + shadcn/ui (New York style) |
-| Backend/API | oRPC (type-safe RPC) |
+| Backend/API | TanStack Start Server Functions (createServerFn) |
 | Database | Supabase (PostgreSQL + Auth) |
 | Validation | Zod v4 |
 | Forms | React Hook Form + @hookform/resolvers |
@@ -33,10 +33,16 @@
 │   ├── hooks/              # Custom React hooks (use-mobile.ts, dll)
 │   ├── lib/                # Utilitas & konfigurasi third-party
 │   │   ├── supabase.ts     # Supabase client instance
-│   │   ├── orpc.ts         # oRPC client instance
 │   │   └── utils.ts        # Helper (cn, dll)
-│   ├── orpc/               # Backend logic (oRPC modular)
-│   │   └── router/         # Modul-modul API
+│   ├── routes/             # File-based routing (TanStack Router)
+│   │   ├── __root.tsx      # Root layout (HTML shell, Header/Footer conditional)
+│   │   ├── index.tsx       # Landing page
+│   │   ├── login.tsx       # Halaman login
+│   │   ├── dashboard.tsx   # Dashboard (private)
+│   │   └── about.tsx       # Halaman about
+│   ├── scripts/            # Script utilitas (create-module.ts)
+│   ├── server/             # Server-side code & API
+│   │   └── modules/        # Modul-modul fitur backend
 │   │       ├── products/
 │   │       ├── contents/
 │   │       └── landing-page/
@@ -47,8 +53,7 @@
 │   │   ├── dashboard.tsx   # Dashboard (private)
 │   │   └── about.tsx       # Halaman about
 │   ├── scripts/            # Script utilitas (create-module.ts)
-│   ├── server/             # Server-side code
-│   │   └── orpc.ts         # oRPC router definition
+
 │   ├── types/              # Type definitions
 │   │   └── database.types.ts  # Auto-generated Supabase types
 │   ├── router.tsx          # TanStack Router instance
@@ -73,13 +78,13 @@
 
 ### Backend (API)
 
-- **oRPC**: Type-safe RPC framework. Client di `src/lib/orpc.ts`, server router di `src/server/orpc.ts`.
-- **Modular Pattern**: Setiap domain/modul di `src/orpc/router/<module>/` memiliki 4 file:
-  - `*-controller.ts` — Handle request/response, panggil service
-  - `*-services.ts` — Business logic, panggil repository
-  - `*-repositories.ts` — Data access (Supabase queries)
-  - `*-schema.ts` — Validasi input dengan Zod
-- **Generator**: `bun run create:module <nama>` untuk scaffold modul baru.
+- **Server Functions**: Type-safe RPC bawaan dari TanStack Start (\`createServerFn\`).
+- **Modular Pattern**: Setiap domain/modul di \`src/server/modules/<module>/\` memiliki 4 file:
+  - \`*-controller.ts\` — Export \`createServerFn\`, validasi input, panggil service
+  - \`*-services.ts\` — Business logic, panggil repository
+  - \`*-repositories.ts\` — Data access (Supabase queries)
+  - \`*-schema.ts\` — Validasi input dengan Zod
+- **Generator**: \`bun run create:module <nama>\` untuk scaffold modul baru.
 
 ### Database
 
@@ -98,5 +103,5 @@
 1. **Styling**: Gunakan utility class Tailwind CSS. Hindari custom CSS class.
 2. **Komponen UI**: Gunakan shadcn/ui di `src/components/ui/`. Jangan buat komponen primitif sendiri.
 3. **API Module**: Buat modul baru via `bun run create:module <nama>`. Ikuti pattern controller → service → repository.
-4. **Type Safety**: Semua API input divalidasi dengan Zod. oRPC menjamin type-safety end-to-end.
+4. **Type Safety**: Semua API input divalidasi dengan Zod. Server Functions menjamin type-safety end-to-end.
 5. **Environment Variables**: Prefix `VITE_` untuk variabel yang diakses di client (contoh: `VITE_SUPABASE_URL`).
