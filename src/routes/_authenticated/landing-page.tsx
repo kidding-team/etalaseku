@@ -231,6 +231,7 @@ function LandingPageBuilder() {
                   products={products}
                   socials={socials}
                   slug={slug}
+                  userId={userId}
                 />
               </div>
             </div>

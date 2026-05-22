@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/item'
 import { ArrowRight, Link2 as LinkIcon, Search } from 'lucide-react'
 import { SocialIcon, parseSocialName } from '@/components/shared/social-icon'
+import { slugify } from '@/lib/slug'
+import { ChatWidget } from '@/components/chatbot/ChatWidget'
 
 export type SitePreviewConfig = {
   brand_name?: string | null
@@ -48,13 +50,16 @@ export function SitePreviewLanding({
   products,
   socials,
   slug,
+  userId,
 }: {
   config: SitePreviewConfig
   products: any[]
   socials: any[]
   /** slug owner (untuk link ke /$slug/linktree) — kosong = tombol disable */
   slug: string
+  userId?: string
 }) {
+  const slugForChat = slug || slugify(config.brand_name || '')
   const primaryColor = config.color_scheme || fallbackPrimary
   const fontFamily = config.typography || fallbackFont
   const linktreeHref = slug ? `/${slug}/linktree` : undefined
@@ -266,6 +271,13 @@ export function SitePreviewLanding({
           &copy; {new Date().getFullYear()} Dibuat dengan Etalaseku
         </p>
       </footer>
+      {(slugForChat || userId) && (
+        <ChatWidget
+          slug={slugForChat || undefined}
+          userId={userId}
+          primaryColor={primaryColor}
+        />
+      )}
     </div>
   )
 }
