@@ -8,7 +8,7 @@ import {
 import { parseWithZod } from '@conform-to/zod/v4'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { Plus, Package, Type, ImagePlus } from 'lucide-react'
+import { Plus, Package, Type, ImagePlus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,6 +66,30 @@ function ProductsPage() {
 
   const [open, setOpen] = React.useState(false)
   const [editingProduct, setEditingProduct] = React.useState<any>(null)
+  const [search, setSearch] = React.useState('')
+  const [sort, setSort] = React.useState('newest')
+
+  const filteredProducts = React.useMemo(() => {
+    let result = products.filter((p: any) =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    )
+    switch (sort) {
+      case 'price_asc':
+        result = [...result].sort((a: any, b: any) => (a.price ?? 0) - (b.price ?? 0))
+        break
+      case 'price_desc':
+        result = [...result].sort((a: any, b: any) => (b.price ?? 0) - (a.price ?? 0))
+        break
+      case 'oldest':
+        result = [...result].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        break
+      case 'newest':
+      default:
+        result = [...result].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        break
+    }
+    return result
+  }, [products, search, sort])
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteProduct({ data: { id } }),
@@ -90,6 +114,28 @@ function ProductsPage() {
         </Button>
       </div>
 
+      <div className="mb-6 flex gap-3">
+        <InputGroup className="flex-1">
+          <InputGroupAddon><Search /></InputGroupAddon>
+          <InputGroupInput
+            placeholder="Cari produk..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </InputGroup>
+        <Select value={sort} onValueChange={setSort}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Terbaru</SelectItem>
+            <SelectItem value="oldest">Terlama</SelectItem>
+            <SelectItem value="price_asc">Harga Terendah</SelectItem>
+            <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {isPending ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -100,7 +146,7 @@ function ProductsPage() {
             </div>
           ))}
         </div>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <Empty className="border py-20">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -115,7 +161,7 @@ function ProductsPage() {
         </Empty>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {products.map((product: any) => (
+          {filteredProducts.map((product: any) => (
             <ProductCard
               key={product.id}
               product={product}
