@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import { AutoCaptionGenerator } from '@/components/AutoCaptionGenerator'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -22,6 +23,7 @@ function Home() {
             <Button asChild size="lg">
               <Link to="/login">Go to Login / Dashboard</Link>
             </Button>
+            <AutoCaptionGenerator />
           </CardContent>
         </Card>
       </main>

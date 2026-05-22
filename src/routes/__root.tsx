@@ -30,7 +30,7 @@ function RootLayout() {
       </head>
       <body
         className="min-h-screen bg-background font-sans antialiased"
-        cz-shourtcut-listen="true"
+        suppressHydrationWarning
       >
         <Outlet />
         <Scripts />
