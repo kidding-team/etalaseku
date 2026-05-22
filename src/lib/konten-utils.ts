@@ -1,13 +1,24 @@
 import {
   startOfWeek,
   endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfDay,
+  endOfDay,
   addDays,
   parseISO,
   isSameDay,
+  isSameMonth,
   isValid,
   format,
 } from 'date-fns'
 import type { ContentRow, Platform } from '@/server/modules/contents/contents-schema'
+
+// ---------- Anchor parsing ----------
+function parseAnchor(dateIso?: string): Date {
+  if (dateIso && isValid(parseISO(dateIso))) return parseISO(dateIso)
+  return new Date()
+}
 
 // ---------- Week range ----------
 // Sunday → Saturday (weekStartsOn: 0).
@@ -16,14 +27,38 @@ export function weekRange(weekStartIso?: string): {
   end: Date
   days: Date[]
 } {
-  const baseDate =
-    weekStartIso && isValid(parseISO(weekStartIso))
-      ? parseISO(weekStartIso)
-      : new Date()
+  const baseDate = parseAnchor(weekStartIso)
   const start = startOfWeek(baseDate, { weekStartsOn: 0 })
   const end = endOfWeek(baseDate, { weekStartsOn: 0 })
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
   return { start, end, days }
+}
+
+// ---------- Day range ----------
+export function dayRange(dateIso?: string): {
+  start: Date
+  end: Date
+  day: Date
+} {
+  const day = startOfDay(parseAnchor(dateIso))
+  return { start: day, end: endOfDay(day), day }
+}
+
+// ---------- Month range (full grid 6×7 = 42 days) ----------
+export function monthRange(dateIso?: string): {
+  start: Date // first day of grid (Sunday on/before month start)
+  end: Date // last day of grid
+  monthStart: Date
+  monthEnd: Date
+  days: Date[] // 42 days (6 weeks × 7)
+} {
+  const base = parseAnchor(dateIso)
+  const monthStart = startOfMonth(base)
+  const monthEnd = endOfMonth(base)
+  const start = startOfWeek(monthStart, { weekStartsOn: 0 })
+  const end = endOfDay(addDays(start, 41))
+  const days = Array.from({ length: 42 }, (_, i) => addDays(start, i))
+  return { start, end, monthStart, monthEnd, days }
 }
 
 // ---------- Place cards into slots ----------
@@ -58,6 +93,58 @@ export function placeCards(
     result.set(key, list)
   }
   return result
+}
+
+// Single-day variant: hour → contents (untuk Day view).
+export function placeCardsByHour(
+  contents: ContentRow[],
+  day: Date,
+): Map<number, ContentRow[]> {
+  const sorted = [...contents].sort((a, b) => {
+    const tA = a.schedule ? new Date(a.schedule).getTime() : 0
+    const tB = b.schedule ? new Date(b.schedule).getTime() : 0
+    return tA - tB
+  })
+  const result = new Map<number, ContentRow[]>()
+  for (const content of sorted) {
+    if (!content.schedule) continue
+    const date = new Date(content.schedule)
+    if (!isSameDay(date, day)) continue
+    const hour = date.getHours()
+    const list = result.get(hour) ?? []
+    list.push(content)
+    result.set(hour, list)
+  }
+  return result
+}
+
+// Date-keyed variant (yyyy-MM-dd → contents) untuk Month view.
+export function dayKey(d: Date): string {
+  return format(d, 'yyyy-MM-dd')
+}
+
+export function placeCardsByDay(
+  contents: ContentRow[],
+): Map<string, ContentRow[]> {
+  const sorted = [...contents].sort((a, b) => {
+    const tA = a.schedule ? new Date(a.schedule).getTime() : 0
+    const tB = b.schedule ? new Date(b.schedule).getTime() : 0
+    return tA - tB
+  })
+  const result = new Map<string, ContentRow[]>()
+  for (const content of sorted) {
+    if (!content.schedule) continue
+    const date = new Date(content.schedule)
+    const key = dayKey(date)
+    const list = result.get(key) ?? []
+    list.push(content)
+    result.set(key, list)
+  }
+  return result
+}
+
+export function isOutsideMonth(day: Date, monthAnchor: Date): boolean {
+  return !isSameMonth(day, monthAnchor)
 }
 
 // ---------- Filters ----------
@@ -148,6 +235,16 @@ export const HARI_INDONESIA = [
 // Format "MMM d - MMM d", contoh "Jun 29 - Jul 5".
 export function formatWeekLabel(start: Date, end: Date): string {
   return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`
+}
+
+// Format "EEEE, d MMM yyyy" — contoh "Sen, 22 Mei 2026".
+export function formatDayLabel(d: Date): string {
+  return format(d, 'EEE, d MMM yyyy')
+}
+
+// Format "MMMM yyyy" — contoh "Mei 2026".
+export function formatMonthLabel(d: Date): string {
+  return format(d, 'MMMM yyyy')
 }
 
 // Bulatkan ke jam berikutnya (R5.1).

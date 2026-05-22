@@ -52,16 +52,34 @@ import {
 import { uploadImage } from '@/server/modules/products/upload'
 import { productFormSchema } from '@/server/modules/products/products-schema'
 import type { ProductFormValues } from '@/server/modules/products/products-schema'
+import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_authenticated/products')({
   component: ProductsPage,
 })
 
+// Hook util: ambil id user yang sedang login (reactive via react-query).
+function useCurrentUserId() {
+  const { data: userId } = useQuery({
+    queryKey: ['auth', 'user-id'],
+    queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      return user?.id ?? null
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+  return userId ?? null
+}
+
 function ProductsPage() {
   const queryClient = useQueryClient()
+  const userId = useCurrentUserId()
   const { data: products = [], isPending } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => getAllProducts(),
+    queryKey: ['products', userId],
+    enabled: !!userId,
+    queryFn: () => getAllProducts({ data: { user_id: userId! } }),
   })
 
   const [open, setOpen] = React.useState(false)
@@ -92,9 +110,10 @@ function ProductsPage() {
   }, [products, search, sort])
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteProduct({ data: { id } }),
+    mutationFn: (id: number) =>
+      deleteProduct({ data: { id, user_id: userId ?? undefined } }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', userId] })
       toast.success('Produk berhasil dihapus')
     },
   })
@@ -195,6 +214,7 @@ function ProductFormDrawer({
   product: any
 }) {
   const queryClient = useQueryClient()
+  const userId = useCurrentUserId()
   const [imagePreview, setImagePreview] = React.useState(
     product?.image_url || '',
   )
@@ -205,22 +225,26 @@ function ProductFormDrawer({
     mutationFn: async (values: ProductFormValues) => {
       const {
         data: { user },
-      } = await (await import('@/lib/supabase')).supabase.auth.getUser()
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Sesi login tidak valid, silakan login ulang')
       const payload = {
         name: values.name,
         description: values.description || null,
         price: values.price ? Number(values.price.replace(/\./g, '')) : null,
         category: values.category || null,
         image_url: imageUrlRef.current || null,
-        user_id: user?.id || null,
+        user_id: user.id,
       }
       if (product) {
-        return updateProduct({ data: { id: product.id, ...payload } })
+        // user_id di-pakai sebagai scope ownership di server (tidak di-update di row)
+        return updateProduct({
+          data: { id: product.id, ...payload, user_id: user.id },
+        })
       }
       return createProduct({ data: payload })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', userId] })
       toast.success(
         product ? 'Produk berhasil diperbarui' : 'Produk berhasil ditambahkan',
       )

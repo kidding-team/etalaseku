@@ -19,6 +19,7 @@ export type ContentRow = {
   social_media: Platform[]
   status: boolean
   product_id: string | null
+  user_id: string | null
   created_at: string
 }
 
@@ -33,6 +34,7 @@ export const createContentSchema = z.object({
   image_urls: z.array(z.string()).max(10).default([]),
   schedule: z.string().nullable().optional(),
   status: z.boolean().default(false),
+  user_id: z.string().nullable().optional(),
 })
 
 // Schema untuk update
@@ -44,6 +46,8 @@ export const updateContentSchema = z.object({
   image_urls: z.array(z.string()).max(10).optional(),
   schedule: z.string().nullable().optional(),
   status: z.boolean().optional(),
+  /** scope ownership saat update — TIDAK akan ter-tulis ke row (immutable) */
+  user_id: z.string().nullable().optional(),
 })
 
 // Schema untuk update status saja
@@ -60,11 +64,18 @@ export const getContentsByDateRangeSchema = z.object({
   status: z.boolean().optional(),
 })
 
+// View mode untuk kalendar
+export const viewModeEnum = z.enum(['day', 'week', 'month'])
+export type ViewMode = z.infer<typeof viewModeEnum>
+
 // Search params untuk URL route
 export const kontenSearchSchema = z.object({
-  weekStart: z.string().optional(),
+  view: viewModeEnum.optional(),
+  date: z.string().optional(), // ISO yyyy-MM-dd, anchor untuk view
   platforms: z.array(platformEnum).optional(),
   status: z.boolean().optional(),
+  // legacy — masih didukung supaya URL lama tidak break
+  weekStart: z.string().optional(),
 })
 
 export type CreateContentIn = z.infer<typeof createContentSchema>

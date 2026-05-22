@@ -2,23 +2,27 @@ import { productRepository } from './products-repositories'
 import type { InsertProduct, UpdateProduct } from './products-schema'
 
 export const productService = {
-  async getAllProducts() {
-    return await productRepository.getAll()
+  async getAllProducts(userId: string) {
+    return await productRepository.getAll(userId)
   },
-  
-  async getProductById(id: number) {
-    return await productRepository.getById(id)
+
+  async getProductById(id: number, userId?: string) {
+    return await productRepository.getById(id, userId)
   },
-  
+
   async createProduct(product: InsertProduct) {
     return await productRepository.create(product)
   },
-  
-  async updateProduct(id: number, product: Omit<UpdateProduct, 'id'>) {
-    return await productRepository.update(id, product)
+
+  async updateProduct(
+    id: number,
+    product: Omit<UpdateProduct, 'id'>,
+    userId?: string,
+  ) {
+    return await productRepository.update(id, product, userId)
   },
-  
-  async deleteProduct(id: number) {
-    return await productRepository.delete(id)
-  }
+
+  async deleteProduct(id: number, userId?: string) {
+    return await productRepository.delete(id, userId)
+  },
 }

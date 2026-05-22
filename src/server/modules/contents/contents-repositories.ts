@@ -1,5 +1,6 @@
 // Supabase repository untuk tabel `contents`.
 import { supabase } from '@/lib/supabase'
+import { deleteContentImages } from './upload'
 import type {
   ContentRow,
   CreateContentIn,
@@ -9,17 +10,33 @@ import type {
 
 // ---------- Helpers ----------
 
+/** Ensure a timestamp string is treated as UTC if it has no timezone info. */
+function ensureUtc(s: string | null): string | null {
+  if (!s) return null
+  // Already has timezone info (Z, +HH:MM, +HHMM, +HH)
+  if (/Z|[+-]\d{2}(:\d{2})?$/i.test(s)) return s
+  return s + 'Z'
+}
+
 function castRow(row: Record<string, unknown>): ContentRow {
   return {
     id: row.id as string,
     captions: (row.captions as string) ?? null,
     image_urls: (row.image_urls as string[]) ?? [],
-    schedule: (row.schedule as string) ?? null,
+    schedule: ensureUtc((row.schedule as string) ?? null),
     social_media: ((row.social_media as string[]) ?? []) as Platform[],
     status: (row.status as boolean) ?? false,
     product_id: (row.product_id as string) ?? null,
+    user_id: (row.user_id as string) ?? null,
     created_at: row.created_at as string,
   }
+}
+
+/** Fire-and-forget unlink — tidak melempar error supaya flow utama tetap jalan. */
+function unlinkUploads(urls: string[]): void {
+  const targets = urls.filter((u) => u && u.startsWith('/uploads/'))
+  if (targets.length === 0) return
+  void deleteContentImages({ data: { urls: targets } }).catch(() => {})
 }
 
 // ---------- Queries ----------
@@ -27,6 +44,7 @@ function castRow(row: Record<string, unknown>): ContentRow {
 export type ListByDateRangeArgs = {
   start: string
   end: string
+  user_id: string
   social_media?: Platform[]
   status?: boolean
 }
@@ -37,6 +55,7 @@ export async function getContentsByDateRange(
   let query = supabase
     .from('contents')
     .select('*')
+    .eq('user_id', args.user_id)
     .gte('schedule', args.start)
     .lte('schedule', args.end)
     .order('schedule', { ascending: true })
@@ -55,22 +74,24 @@ export async function getContentsByDateRange(
   return (data ?? []).map(castRow)
 }
 
-export async function getAllContents(): Promise<ContentRow[]> {
+export async function getAllContents(userId: string): Promise<ContentRow[]> {
   const { data, error } = await supabase
     .from('contents')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(castRow)
 }
 
-export async function getContentById(id: string): Promise<ContentRow> {
-  const { data, error } = await supabase
-    .from('contents')
-    .select('*')
-    .eq('id', id)
-    .single()
+export async function getContentById(
+  id: string,
+  userId?: string,
+): Promise<ContentRow> {
+  let query = supabase.from('contents').select('*').eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+  const { data, error } = await query.single()
 
   if (error) throw new Error(error.message ?? 'Konten tidak ditemukan')
   return castRow(data)
@@ -88,6 +109,7 @@ export async function createContent(
     image_urls: payload.image_urls ?? [],
     schedule: payload.schedule ?? null,
     status: payload.status ?? false,
+    user_id: payload.user_id ?? null,
   }
 
   const { data, error } = await supabase
@@ -103,45 +125,78 @@ export async function createContent(
 export async function updateContent(
   patch: UpdateContentIn,
 ): Promise<ContentRow> {
-  const updateData: Record<string, unknown> = {}
-  if (patch.captions !== undefined) updateData.captions = patch.captions
-  if (patch.social_media !== undefined) updateData.social_media = patch.social_media
-  if (patch.product_id !== undefined) updateData.product_id = patch.product_id
-  if (patch.image_urls !== undefined) updateData.image_urls = patch.image_urls
-  if (patch.schedule !== undefined) updateData.schedule = patch.schedule
-  if (patch.status !== undefined) updateData.status = patch.status
+  // user_id pada row bersifat immutable — pakai sebagai scope ownership saja
+  const { id, user_id, ...rest } = patch
 
-  const { data, error } = await supabase
-    .from('contents')
-    .update(updateData)
-    .eq('id', patch.id)
-    .select()
-    .single()
+  // Kalau image_urls dimutasi, fetch row lama dulu untuk diff cleanup
+  let oldImageUrls: string[] = []
+  if (rest.image_urls !== undefined) {
+    try {
+      const old = await getContentById(id, user_id ?? undefined)
+      oldImageUrls = old.image_urls
+    } catch {
+      // konten tidak ditemukan untuk user ini — biarkan update gagal di langkah berikutnya
+    }
+  }
+
+  const updateData: Record<string, unknown> = {}
+  if (rest.captions !== undefined) updateData.captions = rest.captions
+  if (rest.social_media !== undefined)
+    updateData.social_media = rest.social_media
+  if (rest.product_id !== undefined) updateData.product_id = rest.product_id
+  if (rest.image_urls !== undefined) updateData.image_urls = rest.image_urls
+  if (rest.schedule !== undefined) updateData.schedule = rest.schedule
+  if (rest.status !== undefined) updateData.status = rest.status
+
+  let query = supabase.from('contents').update(updateData).eq('id', id)
+  if (user_id) query = query.eq('user_id', user_id)
+  const { data, error } = await query.select().single()
 
   if (error) throw new Error(error.message)
-  return castRow(data)
+  const row = castRow(data)
+
+  // Setelah update sukses, unlink file yang dilepas (ada di old, tidak di new)
+  if (rest.image_urls !== undefined) {
+    const newSet = new Set(rest.image_urls)
+    const removed = oldImageUrls.filter((u) => !newSet.has(u))
+    if (removed.length > 0) unlinkUploads(removed)
+  }
+
+  return row
 }
 
-export async function deleteContent(id: string): Promise<{ id: string }> {
-  const { error } = await supabase
-    .from('contents')
-    .delete()
-    .eq('id', id)
+export async function deleteContent(
+  id: string,
+  userId?: string,
+): Promise<{ id: string }> {
+  // Ambil row dulu supaya tahu image_urls untuk cleanup setelah delete
+  let imagesToUnlink: string[] = []
+  try {
+    const row = await getContentById(id, userId)
+    imagesToUnlink = row.image_urls ?? []
+  } catch {
+    // kalau row tidak ditemukan / tidak owned, tetap lanjut — delete query akan no-op
+  }
+
+  let query = supabase.from('contents').delete().eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+  const { error } = await query
 
   if (error) throw new Error(error.message)
+
+  if (imagesToUnlink.length > 0) unlinkUploads(imagesToUnlink)
+
   return { id }
 }
 
 export async function updateContentStatus(
   id: string,
   status: boolean,
+  userId?: string,
 ): Promise<ContentRow> {
-  const { data, error } = await supabase
-    .from('contents')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single()
+  let query = supabase.from('contents').update({ status }).eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+  const { data, error } = await query.select().single()
 
   if (error) throw new Error(error.message)
   return castRow(data)

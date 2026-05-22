@@ -1,11 +1,14 @@
 import * as React from 'react'
-import { addDays, format, parseISO, startOfWeek } from 'date-fns'
+import { addDays, addMonths, format, parseISO, startOfMonth, startOfWeek } from 'date-fns'
 import {
   useNavigate,
   useSearch,
 } from '@tanstack/react-router'
-import type { Platform } from '@/server/modules/contents/contents-schema'
-import type { KontenSearch } from '@/server/modules/contents/contents-schema'
+import type {
+  KontenSearch,
+  Platform,
+  ViewMode,
+} from '@/server/modules/contents/contents-schema'
 
 const FROM = '/_authenticated/konten/' as const
 
@@ -21,7 +24,10 @@ export function useKontenFilters() {
 
   const platforms = (search.platforms ?? []) as Platform[]
   const status = search.status as boolean | undefined
-  const weekStart = (search.weekStart as string | undefined) ?? undefined
+  const view: ViewMode = (search.view as ViewMode) ?? 'week'
+  // Backward compat: kalau ada legacy `weekStart` dan `date` belum ada,
+  // pakai weekStart sebagai anchor date.
+  const date = (search.date as string | undefined) ?? search.weekStart
 
   const setSearch = React.useCallback(
     (patch: SearchPatch) => {
@@ -29,9 +35,10 @@ export function useKontenFilters() {
         to: '/konten',
         search: (prev) => {
           const next = patch(prev as KontenSearch)
-          // strip nilai falsy supaya URL tetap bersih
+          // strip nilai default/empty supaya URL tetap bersih
           const out: Record<string, unknown> = {}
-          if (next.weekStart) out.weekStart = next.weekStart
+          if (next.view && next.view !== 'week') out.view = next.view
+          if (next.date) out.date = next.date
           if (next.platforms && next.platforms.length > 0)
             out.platforms = next.platforms
           if (next.status !== undefined) out.status = next.status
@@ -66,55 +73,62 @@ export function useKontenFilters() {
     [setSearch],
   )
 
-  const goToWeek = React.useCallback(
-    (weekStartDate: Date) => {
-      setSearch((prev) => ({
-        ...prev,
-        weekStart: isoDate(
-          startOfWeek(weekStartDate, { weekStartsOn: 0 }),
-        ),
-      }))
+  const setView = React.useCallback(
+    (v: ViewMode) => {
+      setSearch((prev) => ({ ...prev, view: v }))
+    },
+    [setSearch],
+  )
+
+  const setDate = React.useCallback(
+    (d: Date) => {
+      setSearch((prev) => ({ ...prev, date: isoDate(d) }))
     },
     [setSearch],
   )
 
   const goToToday = React.useCallback(() => {
-    setSearch((prev) => ({ ...prev, weekStart: undefined }))
+    setSearch((prev) => ({ ...prev, date: undefined, weekStart: undefined }))
   }, [setSearch])
 
-  const goToPrevWeek = React.useCallback(() => {
+  // Context-aware: prev/next berdasarkan view aktif
+  const goToPrev = React.useCallback(() => {
     setSearch((prev) => {
-      const base = prev.weekStart ? parseISO(prev.weekStart) : new Date()
-      return {
-        ...prev,
-        weekStart: isoDate(
-          startOfWeek(addDays(base, -7), { weekStartsOn: 0 }),
-        ),
-      }
+      const v: ViewMode = (prev.view as ViewMode) ?? 'week'
+      const anchorIso = prev.date ?? prev.weekStart
+      const base = anchorIso ? parseISO(anchorIso) : new Date()
+      let nextDate: Date
+      if (v === 'day') nextDate = addDays(base, -1)
+      else if (v === 'month') nextDate = startOfMonth(addMonths(base, -1))
+      else nextDate = startOfWeek(addDays(base, -7), { weekStartsOn: 0 })
+      return { ...prev, date: isoDate(nextDate), weekStart: undefined }
     })
   }, [setSearch])
 
-  const goToNextWeek = React.useCallback(() => {
+  const goToNext = React.useCallback(() => {
     setSearch((prev) => {
-      const base = prev.weekStart ? parseISO(prev.weekStart) : new Date()
-      return {
-        ...prev,
-        weekStart: isoDate(
-          startOfWeek(addDays(base, 7), { weekStartsOn: 0 }),
-        ),
-      }
+      const v: ViewMode = (prev.view as ViewMode) ?? 'week'
+      const anchorIso = prev.date ?? prev.weekStart
+      const base = anchorIso ? parseISO(anchorIso) : new Date()
+      let nextDate: Date
+      if (v === 'day') nextDate = addDays(base, 1)
+      else if (v === 'month') nextDate = startOfMonth(addMonths(base, 1))
+      else nextDate = startOfWeek(addDays(base, 7), { weekStartsOn: 0 })
+      return { ...prev, date: isoDate(nextDate), weekStart: undefined }
     })
   }, [setSearch])
 
   return {
     platforms,
     status,
-    weekStart,
+    view,
+    date,
     togglePlatform,
     setStatus,
-    goToWeek,
+    setView,
+    setDate,
     goToToday,
-    goToPrevWeek,
-    goToNextWeek,
+    goToPrev,
+    goToNext,
   }
 }

@@ -35,6 +35,7 @@ import {
 } from '@/server/modules/contents/contents-repositories'
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
 import { useContentNavigation } from '@/hooks/use-content-navigation'
+import { useCurrentUserId } from '@/hooks/use-current-user-id'
 import { FormKonten } from './FormKonten'
 import { STATUS_DOT_CLASS } from './status-tokens'
 import { PlatformIcon } from './platform-icons'
@@ -53,6 +54,7 @@ export function KontenDetailPage({
   username,
 }: KontenDetailPageProps) {
   const navigate = useNavigate()
+  const userId = useCurrentUserId()
   const [content, setContent] = React.useState<ContentRow | null>(null)
   const [allContents, setAllContents] = React.useState<ContentRow[]>([])
   const [loading, setLoading] = React.useState(mode === 'edit')
@@ -75,12 +77,13 @@ export function KontenDetailPage({
   // Fetch konten saat mount / id berubah
   const fetchContent = React.useCallback(async () => {
     if (mode !== 'edit' || contentId == null) return
+    if (!userId) return // tunggu auth termuat
     setLoading(true)
     setError(null)
     try {
       const [row, all] = await Promise.all([
-        getContentById(contentId),
-        getAllContents(),
+        getContentById(contentId, userId),
+        getAllContents(userId),
       ])
       setContent(row)
       setAllContents(all)
@@ -90,7 +93,7 @@ export function KontenDetailPage({
     } finally {
       setLoading(false)
     }
-  }, [mode, contentId])
+  }, [mode, contentId, userId])
 
   React.useEffect(() => {
     void fetchContent()
@@ -134,7 +137,7 @@ export function KontenDetailPage({
     setDeleting(true)
     try {
       await Promise.race([
-        deleteContent(content.id),
+        deleteContent(content.id, userId ?? undefined),
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error('Penghapusan melebihi batas waktu')),
@@ -158,7 +161,11 @@ export function KontenDetailPage({
     if (!content) return
     setTransitioning(next)
     try {
-      const updated = await updateContentStatus(content.id, next)
+      const updated = await updateContentStatus(
+        content.id,
+        next,
+        userId ?? undefined,
+      )
       setContent(updated)
       const successMsg = next
         ? 'Konten ditandai sebagai diposting'

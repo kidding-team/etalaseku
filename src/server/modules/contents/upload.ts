@@ -19,3 +19,27 @@ export const uploadContentImage = createServerFn({ method: 'POST' })
 
     return { url: `/uploads/${uniqueName}` }
   })
+
+// Hapus file gambar konten dari disk (folder public/uploads/).
+// Hanya menerima URL yang berbentuk `/uploads/...`; URL eksternal di-skip.
+// Error per-file di-swallow supaya tidak mengganggu flow utama (mirip products).
+export const deleteContentImages = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => d as { urls: string[] })
+  .handler(async ({ data }) => {
+    if (!data.urls || data.urls.length === 0) return { deleted: 0 }
+    const { unlink } = await import('fs/promises')
+    const root = join(process.cwd(), 'public')
+    let deleted = 0
+    await Promise.all(
+      data.urls.map(async (url) => {
+        if (!url || !url.startsWith('/uploads/')) return
+        try {
+          await unlink(join(root, url))
+          deleted += 1
+        } catch {
+          // file mungkin sudah tidak ada — abaikan
+        }
+      }),
+    )
+    return { deleted }
+  })

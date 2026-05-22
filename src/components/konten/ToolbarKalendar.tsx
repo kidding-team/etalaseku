@@ -15,30 +15,66 @@ import {
 } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { useKontenFilters } from '@/hooks/use-konten-filters'
-import { formatWeekLabel } from '@/lib/konten-utils'
-import type { Platform } from '@/server/modules/contents/contents-schema'
+import {
+  formatDayLabel,
+  formatMonthLabel,
+  formatWeekLabel,
+} from '@/lib/konten-utils'
+import type {
+  Platform,
+  ViewMode,
+} from '@/server/modules/contents/contents-schema'
 import { PlatformIcon } from './platform-icons'
 import { cn } from '@/lib/utils'
 
 const PLATFORMS: Platform[] = ['instagram', 'facebook', 'tiktok', 'twitter']
 
 export type ToolbarKalendarProps = {
-  weekStart: Date
-  weekEnd: Date
+  view: ViewMode
+  /** untuk week: rangeStart=weekStart, rangeEnd=weekEnd
+   *  untuk day:  rangeStart=day, rangeEnd=day
+   *  untuk month:rangeStart=monthStart, rangeEnd=monthEnd */
+  rangeStart: Date
+  rangeEnd: Date
 }
 
-export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
+export function ToolbarKalendar({
+  view,
+  rangeStart,
+  rangeEnd,
+}: ToolbarKalendarProps) {
   const {
     platforms,
     status,
     togglePlatform,
     setStatus,
+    setView,
     goToToday,
-    goToPrevWeek,
-    goToNextWeek,
+    goToPrev,
+    goToNext,
   } = useKontenFilters()
 
   const statusValue = status === undefined ? 'all' : String(status)
+
+  const rangeLabel =
+    view === 'day'
+      ? formatDayLabel(rangeStart)
+      : view === 'month'
+        ? formatMonthLabel(rangeStart)
+        : formatWeekLabel(rangeStart, rangeEnd)
+
+  const prevLabel =
+    view === 'day'
+      ? 'Hari sebelumnya'
+      : view === 'month'
+        ? 'Bulan sebelumnya'
+        : 'Minggu sebelumnya'
+  const nextLabel =
+    view === 'day'
+      ? 'Hari berikutnya'
+      : view === 'month'
+        ? 'Bulan berikutnya'
+        : 'Minggu berikutnya'
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-b bg-background/50 px-4 py-3">
@@ -55,39 +91,37 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={goToPrevWeek}
+          onClick={goToPrev}
           className="cursor-pointer"
-          aria-label="Minggu sebelumnya"
+          aria-label={prevLabel}
         >
           <ChevronLeft />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={goToNextWeek}
+          onClick={goToNext}
           className="cursor-pointer"
-          aria-label="Minggu berikutnya"
+          aria-label={nextLabel}
         >
           <ChevronRight />
         </Button>
       </div>
 
       {/* Tengah: label rentang tanggal */}
-      <div className="text-sm font-medium">
-        {formatWeekLabel(weekStart, weekEnd)}
-      </div>
+      <div className="text-sm font-medium">{rangeLabel}</div>
 
       <Separator orientation="vertical" className="h-6" />
 
       {/* View select */}
-      <Select value="week" onValueChange={() => {}}>
-        <SelectTrigger size="sm" className="w-[110px]">
+      <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
+        <SelectTrigger size="sm" className="w-[110px] cursor-pointer">
           <SelectValue placeholder="View" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="day">Day</SelectItem>
           <SelectItem value="week">Week</SelectItem>
-          <DisabledFutureItem value="day" label="Day" />
-          <DisabledFutureItem value="month" label="Month" />
+          <SelectItem value="month">Month</SelectItem>
         </SelectContent>
       </Select>
 
@@ -126,7 +160,7 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
           value={statusValue}
           onValueChange={(v) => setStatus(v === 'all' ? 'all' : v === 'true')}
         >
-          <SelectTrigger size="sm" className="w-[170px]">
+          <SelectTrigger size="sm" className="w-[170px] cursor-pointer">
             <SelectValue placeholder="Semua status" />
           </SelectTrigger>
           <SelectContent>
@@ -137,29 +171,5 @@ export function ToolbarKalendar({ weekStart, weekEnd }: ToolbarKalendarProps) {
         </Select>
       </div>
     </div>
-  )
-}
-
-// SelectItem yang disabled + tooltip "Tersedia di versi mendatang".
-function DisabledFutureItem({
-  value,
-  label,
-}: {
-  value: string
-  label: string
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="block">
-          <SelectItem value={value} disabled>
-            {label}
-          </SelectItem>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        Tersedia di versi mendatang
-      </TooltipContent>
-    </Tooltip>
   )
 }

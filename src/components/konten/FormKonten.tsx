@@ -45,6 +45,7 @@ import { PreviewSwitcher } from './PreviewSwitcher'
 import { PlatformChecklist } from './PlatformChecklist'
 import { AICaptionDialog } from './AICaptionDialog'
 import { roundUpToNextHour } from '@/lib/konten-utils'
+import { supabase } from '@/lib/supabase'
 
 // Form schema — local validation
 const formSchemaCreate = z
@@ -162,6 +163,10 @@ export function FormKonten({
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true)
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Sesi login tidak valid, silakan login ulang')
       if (mode === 'create') {
         const payload = {
           captions: values.captions ?? null,
@@ -173,6 +178,7 @@ export function FormKonten({
               ? new Date().toISOString()
               : (values.schedule ?? null),
           status: false,
+          user_id: user.id,
         }
         const created = await createContent(payload)
         toast.success('Konten berhasil dibuat')
@@ -188,6 +194,8 @@ export function FormKonten({
         product_id: values.product_id ?? null,
         image_urls: values.image_urls,
         schedule: values.schedule ?? initialContent.schedule,
+        // user_id dipakai sebagai scope ownership di repository (immutable di row)
+        user_id: user.id,
       }
       const updated = await updateContent(patch)
       toast.success('Konten berhasil diperbarui')
