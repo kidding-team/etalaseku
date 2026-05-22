@@ -1,34 +1,32 @@
 import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
 import { websiteConfigService } from './website-config-services'
-import { insertWebsiteConfigSchema, updateWebsiteConfigSchema } from './website-config-schema'
+import type { InsertWebsiteConfig } from './website-config-schema'
 
-export const getAllConfig = createServerFn({ method: 'GET' })
-  .handler(async () => {
-    return await websiteConfigService.getAllConfig()
+export const getAllConfig = createServerFn({ method: 'GET' }).handler(async () => {
+  return await websiteConfigService.getAllConfig()
+})
+
+export const getConfigByUserId = createServerFn({ method: 'GET' })
+  .inputValidator((d: unknown) => d as { user_id: string })
+  .handler(async ({ data }) => {
+    return await websiteConfigService.getConfigByUserId(data.user_id)
   })
 
-export const getConfigById = createServerFn({ method: 'GET' })
-  .inputValidator(z.object({ id: z.number() }))
+export const upsertConfig = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => d as InsertWebsiteConfig & { id?: number })
   .handler(async ({ data }) => {
-    return await websiteConfigService.getConfigById(data.id)
-  })
+    const { id: clientId, user_id, ...rest } = data
 
-export const createConfig = createServerFn({ method: 'POST' })
-  .inputValidator(insertWebsiteConfigSchema)
-  .handler(async ({ data }) => {
-    return await websiteConfigService.createConfig(data)
-  })
+    // Lookup existing config for this user
+    const existing = user_id
+      ? await websiteConfigService.getConfigByUserId(user_id)
+      : null
 
-export const updateConfig = createServerFn({ method: 'POST' })
-  .inputValidator(updateWebsiteConfigSchema)
-  .handler(async ({ data }) => {
-    const { id, ...updateData } = data
-    return await websiteConfigService.updateConfig(id, updateData)
-  })
-
-export const deleteConfig = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ id: z.number() }))
-  .handler(async ({ data }) => {
-    return await websiteConfigService.deleteConfig(data.id)
+    if (existing?.id) {
+      return await websiteConfigService.updateConfig(existing.id, { ...rest, user_id })
+    }
+    if (clientId) {
+      return await websiteConfigService.updateConfig(clientId, { ...rest, user_id })
+    }
+    return await websiteConfigService.createConfig({ ...rest, user_id })
   })

@@ -5,7 +5,7 @@ import { NavFooter } from './nav-footer'
 
 export function AppSidebar({ ...props }) {
   return (
-    <Sidebar variant="inset" collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <NavHeader />
       <NavMain />
       <NavFooter />

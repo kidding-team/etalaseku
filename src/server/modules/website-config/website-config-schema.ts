@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const insertWebsiteConfigSchema = z.object({
+  brand_name: z.string().nullable().optional(),
   color_scheme: z.string().nullable().optional(),
   cta_text: z.string().nullable().optional(),
   heading: z.string().nullable().optional(),

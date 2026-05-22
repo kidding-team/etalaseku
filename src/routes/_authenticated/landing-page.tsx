@@ -1,35 +1,25 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  Monitor,
-  Tablet,
-  Smartphone,
-  RotateCcw,
-  Save,
-  Send,
-  ExternalLink,
-  Sparkles,
-  Eye,
-  EyeOff,
-  ChevronUp,
-  ChevronDown,
-  Trash2,
-  Plus,
-} from 'lucide-react'
-import {
-  LandingPreview,
-  DEFAULT_CONFIG,
-  THEME_PRESETS,
-  FONT_OPTIONS,
-  type LandingConfig,
-  type Section,
-  type SectionType,
-} from '@/components/landing-preview'
+import { getFormProps, getInputProps, useForm } from '@conform-to/react'
+import { parseWithZod } from '@conform-to/zod/v4'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Label } from '@/components/ui/label'
+import { Field, FieldError } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -37,1166 +27,896 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
-import { Separator } from '@/components/ui/separator'
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import {
+  Smartphone,
+  Tablet,
+  Monitor,
+  ImagePlus,
+  Plus,
+  Trash2,
+  ArrowRight,
+  Link2 as LinkIcon,
+} from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import {
+  Empty,
+  EmptyMedia,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from '@/components/ui/empty'
+import { supabase } from '@/lib/supabase'
+import {
+  COLOR_PALETTES,
+  FONT_COMBINATIONS,
+  SOCIAL_PLATFORMS,
+} from '@/lib/constants'
+import {
+  SocialIcon,
+  parseSocialName,
+  formatSocialName,
+} from '@/components/shared/social-icon'
+import {
+  getConfigByUserId,
+  upsertConfig,
+} from '@/server/modules/website-config/website-config-controller'
+import { getAllProducts } from '@/server/modules/products/products-controller'
+import { uploadImage } from '@/server/modules/products/upload'
+import {
+  getAllSocialMedia,
+  createSocialMedia,
+  deleteSocialMedia,
+} from '@/server/modules/social-media/social-media-controller'
 
-export const Route = createFileRoute('/_authenticated/landing-page')({
-  component: LandingPageEditor,
+const configFormSchema = z.object({
+  brand_name: z.string().optional().default(''),
+  heading: z.string().optional().default(''),
+  paragraph: z.string().optional().default(''),
+  cta_text: z.string().optional().default(''),
+  color_scheme: z.string().optional().default(''),
+  typography: z.string().optional().default(''),
+  logo_url: z.string().optional().default(''),
 })
 
-const STORAGE_KEY = 'etalaseku.landing-config'
+type ConfigFormValues = z.infer<typeof configFormSchema>
+type Breakpoint = 'mobile' | 'tablet' | 'desktop'
 
-const SECTION_LABEL: Record<SectionType, string> = {
-  hero: 'Hero',
-  menu: 'Menu produk',
-  about: 'Tentang',
-  gallery: 'Galeri',
-  testimonials: 'Testimoni',
-  hours: 'Jam buka',
-  faq: 'FAQ',
-  stats: 'Statistik',
-  cta: 'Call to action',
-  contact: 'Kontak',
-}
+export const Route = createFileRoute('/_authenticated/landing-page')({
+  component: LandingPageBuilder,
+})
 
-const SECTION_VARIANTS: Record<SectionType, string[]> = {
-  hero: ['Centered', 'Split + image'],
-  menu: ['Grid kartu', 'Daftar minimalis'],
-  about: ['Dua kolom', 'Dengan foto'],
-  gallery: ['Mosaic'],
-  testimonials: ['Tiga kolom'],
-  hours: ['Tabel'],
-  faq: ['Accordion'],
-  stats: ['Empat kolom'],
-  cta: ['Centered'],
-  contact: ['Dua kolom'],
-}
+function LandingPageBuilder() {
+  const [userId, setUserId] = React.useState<string>('')
+  const [user, setUser] = React.useState<any>(null)
+  const [breakpoint, setBreakpoint] = React.useState<Breakpoint>('desktop')
 
-function nextId() {
-  return 's' + Math.random().toString(36).slice(2, 9)
-}
-
-function LandingPageEditor() {
-  const [config, setConfig] = React.useState<LandingConfig>(DEFAULT_CONFIG)
-  const [device, setDevice] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  const [dirty, setDirty] = React.useState(false)
-  const [savedAt, setSavedAt] = React.useState<string | null>(null)
-  const [showEditor, setShowEditor] = React.useState(true)
-
-  // Load from localStorage on mount
   React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setConfig({ ...DEFAULT_CONFIG, ...parsed })
-        setSavedAt(parsed._savedAt ?? null)
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id)
+        setUser(data.user)
       }
-    } catch {
-      /* ignore */
-    }
+    })
   }, [])
 
-  const update = <K extends keyof LandingConfig>(
-    key: K,
-    updater: (prev: LandingConfig[K]) => LandingConfig[K],
-  ) => {
-    setConfig((c) => ({ ...c, [key]: updater(c[key]) }))
-    setDirty(true)
-  }
+  const { data: config, isPending: configPending } = useQuery({
+    queryKey: ['website-config', userId],
+    queryFn: () => getConfigByUserId({ data: { user_id: userId } }),
+    enabled: !!userId,
+  })
 
-  const save = () => {
-    const now = new Date().toISOString()
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, _savedAt: now }))
-      setSavedAt(now)
-      setDirty(false)
-    } catch {
-      /* ignore */
-    }
-  }
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => getAllProducts(),
+  })
 
-  const reset = () => {
-    if (!confirm('Reset semua perubahan ke default?')) return
-    setConfig(DEFAULT_CONFIG)
-    setDirty(true)
-  }
+  const { data: socials = [] } = useQuery({
+    queryKey: ['social-media'],
+    queryFn: () => getAllSocialMedia(),
+  })
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'landing-config.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const [liveConfig, setLiveConfig] = React.useState<ConfigFormValues>({
+    brand_name: '',
+    heading: '',
+    paragraph: '',
+    cta_text: '',
+    color_scheme: '',
+    typography: '',
+    logo_url: '',
+  })
 
-  const deviceWidth =
-    device === 'mobile' ? 390 : device === 'tablet' ? 820 : undefined
-
-  const formattedSavedAt = savedAt
-    ? new Date(savedAt).toLocaleString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
+  React.useEffect(() => {
+    if (config) {
+      setLiveConfig({
+        brand_name: config.brand_name || '',
+        heading: config.heading || '',
+        paragraph: config.paragraph || '',
+        cta_text: config.cta_text || '',
+        color_scheme: config.color_scheme || '',
+        typography: config.typography || '',
+        logo_url: config.logo_url || '',
       })
-    : null
+    }
+  }, [config])
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Top toolbar */}
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-sm font-semibold truncate">Landing Page Editor</h1>
-          {dirty ? (
-            <Badge variant="outline" className="text-amber-600 border-amber-300 dark:border-amber-700">
-              Belum disimpan
-            </Badge>
-          ) : formattedSavedAt ? (
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Tersimpan {formattedSavedAt}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowEditor((v) => !v)}
-            className="hidden lg:inline-flex"
-            title={showEditor ? 'Sembunyikan editor' : 'Tampilkan editor'}
-          >
-            {showEditor ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={exportJson} title="Export JSON">
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="ghost" onClick={reset} title="Reset ke default">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <Button size="sm" variant="outline" onClick={save} disabled={!dirty}>
-            <Save className="mr-1.5 h-3.5 w-3.5" />
-            Simpan
-          </Button>
-          <Button size="sm">
-            <Send className="mr-1.5 h-3.5 w-3.5" />
-            Publish
-          </Button>
-        </div>
+    <div className="flex h-[calc(100vh-5rem)] gap-4">
+      {/* Config Panel */}
+      <div className="w-[380px] shrink-0 overflow-y-auto border-r pr-4">
+        <Tabs defaultValue="config">
+          <TabsList className="w-full">
+            <TabsTrigger value="config" className="flex-1">
+              Konfigurasi
+            </TabsTrigger>
+            <TabsTrigger value="socials" className="flex-1">
+              Sosial Media
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="config" className="mt-4">
+            {configPending ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : (
+              <ConfigForm
+                key={config?.id ?? 'new'}
+                config={config}
+                userId={userId}
+                liveConfig={liveConfig}
+                setLiveConfig={setLiveConfig}
+              />
+            )}
+          </TabsContent>
+          <TabsContent value="socials" className="mt-4">
+            <SocialMediaForm userId={userId} socials={socials} />
+          </TabsContent>
+        </Tabs>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Editor sidebar */}
-        {showEditor && (
-          <aside className="w-[340px] shrink-0 border-r overflow-hidden flex flex-col">
-            <Tabs defaultValue="theme" className="flex flex-1 flex-col overflow-hidden">
-              <TabsList className="grid w-full grid-cols-5 rounded-none border-b">
-                <TabsTrigger value="theme" className="text-xs">Tema</TabsTrigger>
-                <TabsTrigger value="type" className="text-xs">Font</TabsTrigger>
-                <TabsTrigger value="layout" className="text-xs">Layout</TabsTrigger>
-                <TabsTrigger value="sections" className="text-xs">Section</TabsTrigger>
-                <TabsTrigger value="content" className="text-xs">Konten</TabsTrigger>
-              </TabsList>
-
-              <ScrollArea className="flex-1">
-                {/* ---------- THEME ---------- */}
-                <TabsContent value="theme" className="m-0 p-4 space-y-5">
-                  <div>
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-                      Palette preset
-                    </Label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {THEME_PRESETS.map((p) => {
-                        const isActive = JSON.stringify(p.theme) === JSON.stringify(config.theme)
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => update('theme', () => p.theme)}
-                            className={cn(
-                              'flex items-center gap-2 rounded-md border p-2 text-left transition-all hover:bg-muted/40',
-                              isActive && 'ring-2 ring-primary border-primary',
-                            )}
-                          >
-                            <div className="flex gap-0.5 shrink-0">
-                              <span className="h-5 w-2 rounded-sm border border-border/40" style={{ background: p.theme.background }} />
-                              <span className="h-5 w-2 rounded-sm" style={{ background: p.theme.primary }} />
-                              <span className="h-5 w-2 rounded-sm" style={{ background: p.theme.accent }} />
-                            </div>
-                            <span className="text-xs truncate">{p.name}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Custom warna
-                    </Label>
-                    {(
-                      [
-                        ['background', 'Background'],
-                        ['foreground', 'Foreground'],
-                        ['primary', 'Primary'],
-                        ['primaryFg', 'Primary text'],
-                        ['accent', 'Accent'],
-                        ['mutedBg', 'Muted bg'],
-                        ['mutedFg', 'Muted text'],
-                        ['border', 'Border'],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <ColorRow
-                        key={key}
-                        label={label}
-                        value={config.theme[key]}
-                        onChange={(v) => update('theme', (t) => ({ ...t, [key]: v }))}
-                      />
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      const random = THEME_PRESETS[Math.floor(Math.random() * THEME_PRESETS.length)]
-                      update('theme', () => random.theme)
-                    }}
-                  >
-                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                    Acak palette
-                  </Button>
-                </TabsContent>
-
-                {/* ---------- TYPOGRAPHY ---------- */}
-                <TabsContent value="type" className="m-0 p-4 space-y-5">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Font headline</Label>
-                    <Select
-                      value={config.typography.headingFont}
-                      onValueChange={(v) =>
-                        update('typography', (t) => ({ ...t, headingFont: v }))
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FONT_OPTIONS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>
-                            <span style={{ fontFamily: f.value }}>{f.label}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Font body</Label>
-                    <Select
-                      value={config.typography.bodyFont}
-                      onValueChange={(v) =>
-                        update('typography', (t) => ({ ...t, bodyFont: v }))
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FONT_OPTIONS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>
-                            <span style={{ fontFamily: f.value }}>{f.label}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Berat heading</Label>
-                    <ToggleGroup
-                      type="single"
-                      value={config.typography.weight}
-                      onValueChange={(v) => {
-                        if (v) update('typography', (t) => ({ ...t, weight: v as any }))
-                      }}
-                      className="grid grid-cols-4 gap-1"
-                    >
-                      <ToggleGroupItem value="normal" className="text-xs">Regular</ToggleGroupItem>
-                      <ToggleGroupItem value="medium" className="text-xs">Medium</ToggleGroupItem>
-                      <ToggleGroupItem value="semibold" className="text-xs">Semi</ToggleGroupItem>
-                      <ToggleGroupItem value="bold" className="text-xs">Bold</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Letter spacing</Label>
-                    <ToggleGroup
-                      type="single"
-                      value={config.typography.tracking}
-                      onValueChange={(v) => {
-                        if (v) update('typography', (t) => ({ ...t, tracking: v as any }))
-                      }}
-                      className="grid grid-cols-3 gap-1"
-                    >
-                      <ToggleGroupItem value="tight" className="text-xs">Tight</ToggleGroupItem>
-                      <ToggleGroupItem value="normal" className="text-xs">Normal</ToggleGroupItem>
-                      <ToggleGroupItem value="wide" className="text-xs">Wide</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-xs flex items-center justify-between">
-                      <span>Skala heading</span>
-                      <span className="text-muted-foreground">{config.typography.scale.toFixed(2)}×</span>
-                    </Label>
-                    <Slider
-                      min={0.85}
-                      max={1.25}
-                      step={0.05}
-                      value={[config.typography.scale]}
-                      onValueChange={([v]) => update('typography', (t) => ({ ...t, scale: v }))}
-                    />
-                  </div>
-
-                  <div
-                    className="rounded-md border p-4"
-                    style={{
-                      fontFamily: config.typography.headingFont,
-                      letterSpacing:
-                        config.typography.tracking === 'tight'
-                          ? '-0.02em'
-                          : config.typography.tracking === 'wide'
-                          ? '0.04em'
-                          : '0',
-                    }}
-                  >
-                    <p className="text-xs uppercase mb-2 text-muted-foreground" style={{ letterSpacing: '0.15em' }}>
-                      Preview
-                    </p>
-                    <p className="text-2xl leading-tight" style={{
-                      fontWeight: config.typography.weight === 'normal' ? 400 : config.typography.weight === 'medium' ? 500 : config.typography.weight === 'semibold' ? 600 : 700,
-                    }}>
-                      Masakan rumahan, dibuat tiap pagi.
-                    </p>
-                    <p className="text-sm mt-2 text-muted-foreground" style={{ fontFamily: config.typography.bodyFont }}>
-                      Resep keluarga yang dijaga turun-temurun sejak 1998.
-                    </p>
-                  </div>
-                </TabsContent>
-
-                {/* ---------- LAYOUT ---------- */}
-                <TabsContent value="layout" className="m-0 p-4 space-y-5">
-                  <div className="space-y-2">
-                    <Label className="text-xs flex items-center justify-between">
-                      <span>Border radius</span>
-                      <span className="text-muted-foreground">{config.layout.radius}px</span>
-                    </Label>
-                    <Slider
-                      min={0}
-                      max={32}
-                      step={1}
-                      value={[config.layout.radius]}
-                      onValueChange={([v]) => update('layout', (l) => ({ ...l, radius: v }))}
-                    />
-                    <div className="flex gap-1 pt-1">
-                      {[0, 4, 8, 16, 24].map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => update('layout', (l) => ({ ...l, radius: r }))}
-                          className={cn(
-                            'flex-1 h-7 text-[10px] border transition-colors',
-                            config.layout.radius === r ? 'border-foreground bg-muted' : 'border-border hover:bg-muted/50',
-                          )}
-                          style={{ borderRadius: r }}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs flex items-center justify-between">
-                      <span>Jarak antar section</span>
-                      <span className="text-muted-foreground">{config.layout.sectionSpacing}px</span>
-                    </Label>
-                    <Slider
-                      min={32}
-                      max={140}
-                      step={4}
-                      value={[config.layout.sectionSpacing]}
-                      onValueChange={([v]) => update('layout', (l) => ({ ...l, sectionSpacing: v }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Lebar container</Label>
-                    <ToggleGroup
-                      type="single"
-                      value={config.layout.container}
-                      onValueChange={(v) => {
-                        if (v) update('layout', (l) => ({ ...l, container: v as any }))
-                      }}
-                      className="grid grid-cols-4 gap-1"
-                    >
-                      <ToggleGroupItem value="narrow" className="text-xs">Narrow</ToggleGroupItem>
-                      <ToggleGroupItem value="medium" className="text-xs">Medium</ToggleGroupItem>
-                      <ToggleGroupItem value="wide" className="text-xs">Wide</ToggleGroupItem>
-                      <ToggleGroupItem value="full" className="text-xs">Full</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Bayangan</Label>
-                    <ToggleGroup
-                      type="single"
-                      value={config.layout.shadow}
-                      onValueChange={(v) => {
-                        if (v) update('layout', (l) => ({ ...l, shadow: v as any }))
-                      }}
-                      className="grid grid-cols-4 gap-1"
-                    >
-                      <ToggleGroupItem value="none" className="text-xs">None</ToggleGroupItem>
-                      <ToggleGroupItem value="sm" className="text-xs">Soft</ToggleGroupItem>
-                      <ToggleGroupItem value="md" className="text-xs">Medium</ToggleGroupItem>
-                      <ToggleGroupItem value="lg" className="text-xs">Dramatic</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-                </TabsContent>
-
-                {/* ---------- SECTIONS ---------- */}
-                <TabsContent value="sections" className="m-0 p-4 space-y-3">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Atur urutan, ganti varian, atau sembunyikan tiap section.
-                  </p>
-                  {config.sections.map((s, idx) => (
-                    <SectionRow
-                      key={s.id}
-                      section={s}
-                      isFirst={idx === 0}
-                      isLast={idx === config.sections.length - 1}
-                      onMove={(dir) => {
-                        update('sections', (list) => {
-                          const arr = [...list]
-                          const target = dir === 'up' ? idx - 1 : idx + 1
-                          if (target < 0 || target >= arr.length) return arr
-                          ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
-                          return arr
-                        })
-                      }}
-                      onToggle={() => {
-                        update('sections', (list) =>
-                          list.map((x) => (x.id === s.id ? { ...x, visible: !x.visible } : x)),
-                        )
-                      }}
-                      onVariant={(v) => {
-                        update('sections', (list) =>
-                          list.map((x) => (x.id === s.id ? { ...x, variant: v } : x)),
-                        )
-                      }}
-                      onRemove={() => {
-                        update('sections', (list) => list.filter((x) => x.id !== s.id))
-                      }}
-                    />
-                  ))}
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Tambah section</Label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {(Object.keys(SECTION_LABEL) as SectionType[]).map((t) => (
-                        <Button
-                          key={t}
-                          variant="outline"
-                          size="sm"
-                          className="justify-start h-8 text-xs"
-                          onClick={() => {
-                            update('sections', (list) => [
-                              ...list,
-                              { id: nextId(), type: t, variant: 0, visible: true },
-                            ])
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          {SECTION_LABEL[t]}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* ---------- CONTENT ---------- */}
-                <TabsContent value="content" className="m-0 p-4 space-y-5">
-                  <ContentSection title="Brand">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">Nama brand</Label>
-                        <Input
-                          value={config.brand.name}
-                          onChange={(e) => update('brand', (b) => ({ ...b, name: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Logo text</Label>
-                        <Input
-                          value={config.brand.logoText ?? ''}
-                          maxLength={3}
-                          onChange={(e) => update('brand', (b) => ({ ...b, logoText: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </ContentSection>
-
-                  <ContentSection title="Hero">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Eyebrow</Label>
-                      <Input
-                        value={config.hero.eyebrow}
-                        onChange={(e) => update('hero', (h) => ({ ...h, eyebrow: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Headline</Label>
-                      <Textarea
-                        rows={2}
-                        value={config.hero.heading}
-                        onChange={(e) => update('hero', (h) => ({ ...h, heading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Subheading</Label>
-                      <Textarea
-                        rows={3}
-                        value={config.hero.subheading}
-                        onChange={(e) => update('hero', (h) => ({ ...h, subheading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">CTA utama</Label>
-                        <Input
-                          value={config.hero.primaryCta}
-                          onChange={(e) => update('hero', (h) => ({ ...h, primaryCta: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">CTA sekunder</Label>
-                        <Input
-                          value={config.hero.secondaryCta}
-                          onChange={(e) => update('hero', (h) => ({ ...h, secondaryCta: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Alignment</Label>
-                      <ToggleGroup
-                        type="single"
-                        value={config.hero.align}
-                        onValueChange={(v) => {
-                          if (v) update('hero', (h) => ({ ...h, align: v as any }))
-                        }}
-                        className="grid grid-cols-3 gap-1"
-                      >
-                        <ToggleGroupItem value="left" className="text-xs">Kiri</ToggleGroupItem>
-                        <ToggleGroupItem value="center" className="text-xs">Tengah</ToggleGroupItem>
-                        <ToggleGroupItem value="right" className="text-xs">Kanan</ToggleGroupItem>
-                      </ToggleGroup>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Background hero</Label>
-                      <ToggleGroup
-                        type="single"
-                        value={config.hero.bgStyle}
-                        onValueChange={(v) => {
-                          if (v) update('hero', (h) => ({ ...h, bgStyle: v as any }))
-                        }}
-                        className="grid grid-cols-4 gap-1"
-                      >
-                        <ToggleGroupItem value="solid" className="text-xs">Solid</ToggleGroupItem>
-                        <ToggleGroupItem value="soft" className="text-xs">Soft</ToggleGroupItem>
-                        <ToggleGroupItem value="gradient" className="text-xs">Gradient</ToggleGroupItem>
-                        <ToggleGroupItem value="pattern" className="text-xs">Pattern</ToggleGroupItem>
-                      </ToggleGroup>
-                    </div>
-                  </ContentSection>
-
-                  <ContentSection title="Menu produk">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Eyebrow</Label>
-                      <Input
-                        value={config.menu.eyebrow}
-                        onChange={(e) => update('menu', (m) => ({ ...m, eyebrow: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Heading</Label>
-                      <Input
-                        value={config.menu.heading}
-                        onChange={(e) => update('menu', (m) => ({ ...m, heading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs">Item ({config.menu.items.length})</Label>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs"
-                          onClick={() =>
-                            update('menu', (m) => ({
-                              ...m,
-                              items: [...m.items, { name: 'Menu baru', price: 'Rp 0', description: '' }],
-                            }))
-                          }
-                        >
-                          <Plus className="h-3 w-3 mr-0.5" />
-                          Tambah
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {config.menu.items.map((it, i) => (
-                          <div key={i} className="rounded-md border p-2.5 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                                Item {i + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  update('menu', (m) => ({
-                                    ...m,
-                                    items: m.items.filter((_, idx) => idx !== i),
-                                  }))
-                                }
-                                className="text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-                            <Input
-                              placeholder="Nama"
-                              value={it.name}
-                              onChange={(e) =>
-                                update('menu', (m) => ({
-                                  ...m,
-                                  items: m.items.map((x, idx) =>
-                                    idx === i ? { ...x, name: e.target.value } : x,
-                                  ),
-                                }))
-                              }
-                            />
-                            <Input
-                              placeholder="Harga"
-                              value={it.price}
-                              onChange={(e) =>
-                                update('menu', (m) => ({
-                                  ...m,
-                                  items: m.items.map((x, idx) =>
-                                    idx === i ? { ...x, price: e.target.value } : x,
-                                  ),
-                                }))
-                              }
-                            />
-                            <Input
-                              placeholder="Deskripsi singkat"
-                              value={it.description ?? ''}
-                              onChange={(e) =>
-                                update('menu', (m) => ({
-                                  ...m,
-                                  items: m.items.map((x, idx) =>
-                                    idx === i ? { ...x, description: e.target.value } : x,
-                                  ),
-                                }))
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </ContentSection>
-
-                  <ContentSection title="Tentang">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Heading</Label>
-                      <Textarea
-                        rows={2}
-                        value={config.about.heading}
-                        onChange={(e) => update('about', (a) => ({ ...a, heading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cerita</Label>
-                      <Textarea
-                        rows={5}
-                        value={config.about.body}
-                        onChange={(e) => update('about', (a) => ({ ...a, body: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Highlight (satu per baris)</Label>
-                      <Textarea
-                        rows={4}
-                        value={config.about.highlights.join('\n')}
-                        onChange={(e) =>
-                          update('about', (a) => ({
-                            ...a,
-                            highlights: e.target.value.split('\n').filter(Boolean),
-                          }))
-                        }
-                      />
-                    </div>
-                  </ContentSection>
-
-                  <ContentSection title="Testimoni">
-                    {config.testimonials.items.map((t, i) => (
-                      <div key={i} className="rounded-md border p-2.5 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            #{i + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              update('testimonials', (a) => ({
-                                ...a,
-                                items: a.items.filter((_, idx) => idx !== i),
-                              }))
-                            }
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <Input
-                          placeholder="Nama"
-                          value={t.name}
-                          onChange={(e) =>
-                            update('testimonials', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) =>
-                                idx === i ? { ...x, name: e.target.value } : x,
-                              ),
-                            }))
-                          }
-                        />
-                        <Input
-                          placeholder="Peran"
-                          value={t.role}
-                          onChange={(e) =>
-                            update('testimonials', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) =>
-                                idx === i ? { ...x, role: e.target.value } : x,
-                              ),
-                            }))
-                          }
-                        />
-                        <Textarea
-                          rows={3}
-                          placeholder="Kutipan"
-                          value={t.quote}
-                          onChange={(e) =>
-                            update('testimonials', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) =>
-                                idx === i ? { ...x, quote: e.target.value } : x,
-                              ),
-                            }))
-                          }
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() =>
-                        update('testimonials', (a) => ({
-                          ...a,
-                          items: [...a.items, { name: 'Nama pelanggan', role: 'Pelanggan', quote: 'Kutipan…' }],
-                        }))
-                      }
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Tambah testimoni
-                    </Button>
-                  </ContentSection>
-
-                  <ContentSection title="Statistik">
-                    {config.stats.items.map((s, i) => (
-                      <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-1.5 items-center">
-                        <Input
-                          placeholder="200K+"
-                          value={s.value}
-                          onChange={(e) =>
-                            update('stats', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) =>
-                                idx === i ? { ...x, value: e.target.value } : x,
-                              ),
-                            }))
-                          }
-                        />
-                        <Input
-                          placeholder="Pesanan diantar"
-                          value={s.label}
-                          onChange={(e) =>
-                            update('stats', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) =>
-                                idx === i ? { ...x, label: e.target.value } : x,
-                              ),
-                            }))
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            update('stats', (a) => ({
-                              ...a,
-                              items: a.items.filter((_, idx) => idx !== i),
-                            }))
-                          }
-                          className="p-1 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    {config.stats.items.length < 6 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={() =>
-                          update('stats', (a) => ({
-                            ...a,
-                            items: [...a.items, { value: '0', label: 'Label' }],
-                          }))
-                        }
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Tambah statistik
-                      </Button>
-                    )}
-                  </ContentSection>
-
-                  <ContentSection title="FAQ">
-                    {config.faq.items.map((it, i) => (
-                      <div key={i} className="rounded-md border p-2.5 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                            FAQ #{i + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              update('faq', (a) => ({
-                                ...a,
-                                items: a.items.filter((_, idx) => idx !== i),
-                              }))
-                            }
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <Input
-                          placeholder="Pertanyaan"
-                          value={it.q}
-                          onChange={(e) =>
-                            update('faq', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) => (idx === i ? { ...x, q: e.target.value } : x)),
-                            }))
-                          }
-                        />
-                        <Textarea
-                          rows={2}
-                          placeholder="Jawaban"
-                          value={it.a}
-                          onChange={(e) =>
-                            update('faq', (a) => ({
-                              ...a,
-                              items: a.items.map((x, idx) => (idx === i ? { ...x, a: e.target.value } : x)),
-                            }))
-                          }
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() =>
-                        update('faq', (a) => ({
-                          ...a,
-                          items: [...a.items, { q: 'Pertanyaan baru?', a: 'Jawaban…' }],
-                        }))
-                      }
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Tambah FAQ
-                    </Button>
-                  </ContentSection>
-
-                  <ContentSection title="CTA">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Heading</Label>
-                      <Input
-                        value={config.cta.heading}
-                        onChange={(e) => update('cta', (c) => ({ ...c, heading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Subheading</Label>
-                      <Input
-                        value={config.cta.subheading}
-                        onChange={(e) => update('cta', (c) => ({ ...c, subheading: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Tombol</Label>
-                      <Input
-                        value={config.cta.button}
-                        onChange={(e) => update('cta', (c) => ({ ...c, button: e.target.value }))}
-                      />
-                    </div>
-                  </ContentSection>
-
-                  <ContentSection title="Kontak">
-                    <div className="space-y-2">
-                      <Label className="text-xs">WhatsApp</Label>
-                      <Input
-                        value={config.contact.phone}
-                        onChange={(e) => update('contact', (c) => ({ ...c, phone: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Email</Label>
-                      <Input
-                        value={config.contact.email}
-                        onChange={(e) => update('contact', (c) => ({ ...c, email: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Alamat</Label>
-                      <Textarea
-                        rows={2}
-                        value={config.contact.address}
-                        onChange={(e) => update('contact', (c) => ({ ...c, address: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Instagram</Label>
-                        <Input
-                          value={config.contact.instagram}
-                          onChange={(e) => update('contact', (c) => ({ ...c, instagram: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Facebook</Label>
-                        <Input
-                          value={config.contact.facebook}
-                          onChange={(e) => update('contact', (c) => ({ ...c, facebook: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  </ContentSection>
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
-          </aside>
-        )}
-
-        {/* Preview pane */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-muted/40">
-          <div className="flex items-center justify-between border-b bg-background px-4 py-2">
-            <p className="text-xs text-muted-foreground">Pratinjau</p>
+      {/* Preview Panel */}
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+        <Tabs defaultValue="landing" className="flex h-full flex-col">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="landing">Landing Page</TabsTrigger>
+              <TabsTrigger value="linktree">Linktree</TabsTrigger>
+            </TabsList>
             <ToggleGroup
               type="single"
-              value={device}
-              onValueChange={(v) => v && setDevice(v as any)}
-              className="gap-0"
+              value={breakpoint}
+              onValueChange={(v) => v && setBreakpoint(v as Breakpoint)}
+              variant="outline"
             >
-              <ToggleGroupItem value="desktop" className="h-7 px-2">
-                <Monitor className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="mobile" aria-label="Mobile">
+                <Smartphone className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="tablet" className="h-7 px-2">
-                <Tablet className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="tablet" aria-label="Tablet">
+                <Tablet className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="mobile" className="h-7 px-2">
-                <Smartphone className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="desktop" aria-label="Desktop">
+                <Monitor className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
-
-          <div className="flex-1 overflow-auto p-4 sm:p-6">
-            <div
-              className={cn('mx-auto bg-background border rounded-lg overflow-hidden shadow-sm transition-all')}
-              style={{ maxWidth: deviceWidth ?? '100%' }}
-            >
-              <LandingPreview config={config} />
+          <TabsContent value="landing" className="mt-3 flex-1 overflow-hidden">
+            <div className="flex h-full justify-center overflow-y-auto rounded-lg border bg-background">
+              <div
+                className="transition-all min-h-full"
+                style={{
+                  width:
+                    breakpoint === 'mobile'
+                      ? '375px'
+                      : breakpoint === 'tablet'
+                        ? '768px'
+                        : '100%',
+                  maxWidth: '100%',
+                }}
+              >
+                <LandingPreview
+                  config={liveConfig}
+                  products={products}
+                  socials={socials}
+                />
+              </div>
             </div>
+          </TabsContent>
+          <TabsContent value="linktree" className="mt-3 flex-1 overflow-hidden">
+            <div className="flex h-full justify-center overflow-y-auto rounded-lg border bg-background">
+              <div
+                className="transition-all min-h-full"
+                style={{
+                  width:
+                    breakpoint === 'mobile'
+                      ? '375px'
+                      : breakpoint === 'tablet'
+                        ? '768px'
+                        : '100%',
+                  maxWidth: '100%',
+                }}
+              >
+                <LinktreePreview
+                  config={liveConfig}
+                  socials={socials}
+                  user={user}
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
+
+function LandingPreview({
+  config,
+  products,
+  socials,
+}: {
+  config: ConfigFormValues
+  products: any[]
+  socials: any[]
+}) {
+  const primaryColor = config.color_scheme || '#6366f1'
+  const fontFamily = config.typography || 'Outfit'
+
+  return (
+    <div style={{ fontFamily }} className="relative bg-background">
+      {/* Header */}
+      <header className="absolute inset-x-0 top-0 z-20">
+        <div className="container flex h-14 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            {config.logo_url ? (
+              <img src={config.logo_url} alt="Logo" className="h-8" />
+            ) : (
+              <span className="font-serif text-xl italic">
+                {config.brand_name || 'Etalaseku'}
+              </span>
+            )}
           </div>
-        </main>
-      </div>
-    </div>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Sub-components                                                             */
-/* -------------------------------------------------------------------------- */
-
-function ColorRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <label className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border cursor-pointer" style={{ background: value }}>
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        />
-      </label>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium leading-tight">{label}</p>
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-6 text-[11px] font-mono mt-0.5 px-1.5"
-        />
-      </div>
-    </div>
-  )
-}
-
-function SectionRow({
-  section,
-  isFirst,
-  isLast,
-  onMove,
-  onToggle,
-  onVariant,
-  onRemove,
-}: {
-  section: Section
-  isFirst: boolean
-  isLast: boolean
-  onMove: (dir: 'up' | 'down') => void
-  onToggle: () => void
-  onVariant: (v: number) => void
-  onRemove: () => void
-}) {
-  const variants = SECTION_VARIANTS[section.type] ?? ['Default']
-  return (
-    <div
-      className={cn(
-        'rounded-md border p-2.5',
-        section.visible ? 'bg-card' : 'bg-muted/40 opacity-60',
-      )}
-    >
-      <div className="flex items-center gap-1.5">
-        <div className="flex flex-col gap-0.5">
-          <button
-            type="button"
-            disabled={isFirst}
-            onClick={() => onMove('up')}
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+          <Button
+            size="sm"
+            className="rounded-full"
+            style={{ backgroundColor: primaryColor }}
           >
-            <ChevronUp className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            disabled={isLast}
-            onClick={() => onMove('down')}
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            {config.cta_text || 'Hubungi Kami'}
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative flex min-h-[60vh] flex-col items-center justify-center overflow-hidden text-center md:min-h-[80vh] md:py-24">
+        {/* Gradient Orbs */}
+        <div
+          className="absolute -top-24 -left-24 size-72 rounded-full opacity-30 blur-3xl md:size-96"
+          style={{ backgroundColor: primaryColor }}
+        />
+        <div
+          className="absolute -bottom-24 -right-24 size-72 rounded-full opacity-20 blur-3xl md:size-96"
+          style={{ backgroundColor: primaryColor }}
+        />
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40" />
+
+        <div className="relative z-10 max-w-3xl px-4">
+          {/* Badge */}
+          <Badge
+            variant="outline"
+            className="mb-5 gap-2 rounded-full bg-background/60 backdrop-blur-sm md:mb-6"
+            style={{ borderColor: `${primaryColor}40`, color: primaryColor }}
           >
-            <ChevronDown className="h-3 w-3" />
-          </button>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium leading-tight truncate">{SECTION_LABEL[section.type]}</p>
-        </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title={section.visible ? 'Sembunyikan' : 'Tampilkan'}
-        >
-          {section.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
-          title="Hapus"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      {variants.length > 1 && (
-        <div className="mt-2 flex gap-1">
-          {variants.map((v, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => onVariant(idx)}
-              className={cn(
-                'flex-1 text-[10px] py-1 px-2 rounded border transition-colors',
-                section.variant === idx
-                  ? 'border-foreground bg-muted'
-                  : 'border-border text-muted-foreground hover:bg-muted/50',
-              )}
+            <span className="relative flex size-2">
+              <span
+                className="absolute inline-flex size-full animate-ping rounded-full opacity-75"
+                style={{ backgroundColor: primaryColor }}
+              />
+              <span
+                className="relative inline-flex size-2 rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              />
+            </span>
+            {config.brand_name || 'Etalaseku'}
+          </Badge>
+
+          <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-6xl lg:text-7xl">
+            {config.heading ? (
+              <>
+                <span style={{ color: primaryColor }}>
+                  <em className="font-serif italic">
+                    {config.heading.split(' ')[0]}
+                  </em>
+                </span>{' '}
+                {config.heading.split(' ').slice(1).join(' ')}
+              </>
+            ) : (
+              <>
+                <span style={{ color: primaryColor }}>
+                  <em className="font-serif italic">Selamat</em>
+                </span>{' '}
+                Datang di Toko Kami
+              </>
+            )}
+          </h1>
+
+          <p className="mt-5 max-w-2xl text-sm text-muted-foreground md:mt-7 md:text-lg">
+            {config.paragraph ||
+              'Temukan produk-produk pilihan terbaik untuk kebutuhan Anda.'}
+          </p>
+
+          <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center md:mt-10">
+            <Button
+              size="lg"
+              className="group rounded-full"
+              style={{ backgroundColor: primaryColor }}
             >
-              {v}
-            </button>
+              {config.cta_text || 'Lihat Produk'}
+              <ArrowRight className="transition-transform group-hover:translate-x-1" />
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="rounded-full"
+            >
+              <a
+                href={`/linktree/${config.brand_name?.toLowerCase().replace(/\s+/g, '-') || 'me'}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <LinkIcon />
+                Linktree
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        {/* Seamless fade */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-background" />
+      </section>
+
+      {/* Products */}
+      <section className="py-10 md:py-16">
+        <div className="container max-w-5xl px-4">
+          <div className="mb-6 text-center md:mb-10">
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl md:text-3xl lg:text-4xl">
+              <em className="font-serif italic" style={{ color: primaryColor }}>
+                Produk
+              </em>{' '}
+              Pilihan
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Lihat koleksi produk kami
+            </p>
+          </div>
+          {products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+              {products.map((p: any) => (
+                <Card
+                  key={p.id}
+                  className="group gap-2 border-none bg-transparent p-0 shadow-none"
+                >
+                  <AspectRatio
+                    ratio={1 / 1}
+                    className="overflow-hidden rounded-xl bg-muted md:rounded-2xl"
+                  >
+                    {p.image_url ? (
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        className="size-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                        No image
+                      </div>
+                    )}
+                  </AspectRatio>
+                  <CardContent className="p-0">
+                    <p className="truncate text-xs font-medium md:text-sm">
+                      {p.name}
+                    </p>
+                    <p
+                      className="text-xs font-semibold md:text-sm"
+                      style={{ color: primaryColor }}
+                    >
+                      {p.price
+                        ? `Rp ${p.price.toLocaleString('id-ID')}`
+                        : 'Hubungi kami'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              Belum ada produk
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* CTA / Social */}
+      <section className="border-t bg-muted/30 py-10 md:py-16">
+        <div className="container mx-auto max-w-3xl px-4 text-center">
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">
+            <em className="font-serif italic">Terhubung</em> dengan Kami
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground md:text-base">
+            Ikuti kami di media sosial
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2 md:mt-8 md:gap-3">
+            {socials.length > 0 ? (
+              socials.map((s: any) => {
+                const { platform, username } = parseSocialName(s.name)
+                return (
+                  <Button
+                    key={s.id}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                  >
+                    <a href={s.link || '#'} target="_blank" rel="noreferrer">
+                      <SocialIcon platform={platform} />
+                      {username}
+                    </a>
+                  </Button>
+                )
+              })
+            ) : (
+              <p className="text-muted-foreground">Belum ada sosial media</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t py-8 text-center">
+        <p
+          className="font-serif text-lg italic"
+          style={{ color: primaryColor }}
+        >
+          {config.brand_name || config.heading || 'Etalaseku'}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()} Dibuat dengan Etalaseku
+        </p>
+      </footer>
+    </div>
+  )
+}
+
+function SocialMediaForm({
+  userId,
+  socials,
+}: {
+  userId: string
+  socials: any[]
+}) {
+  const queryClient = useQueryClient()
+  const [platform, setPlatform] = React.useState<string>('instagram')
+  const [username, setUsername] = React.useState('')
+
+  const currentPlatform = SOCIAL_PLATFORMS.find((p) => p.value === platform)
+  const prefix = currentPlatform?.prefix || 'https://'
+
+  const addMutation = useMutation({
+    mutationFn: () =>
+      createSocialMedia({
+        data: {
+          name: formatSocialName(platform, username),
+          link: prefix + username,
+          user_id: userId,
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['social-media'] })
+      setUsername('')
+      toast.success('Sosial media ditambahkan')
+    },
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (id: number) => deleteSocialMedia({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['social-media'] })
+      toast.success('Sosial media dihapus')
+    },
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Select value={platform} onValueChange={setPlatform}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SOCIAL_PLATFORMS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                <div className="flex items-center gap-2">
+                  <SocialIcon platform={p.value} className="h-4 w-4" />
+                  {p.label}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>{prefix}</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="username"
+            className="pl-0.5!"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </InputGroup>
+        <Button
+          onClick={() => addMutation.mutate()}
+          disabled={!username || addMutation.isPending}
+          className="w-full"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Tambah
+        </Button>
+      </div>
+      <Separator />
+      <div className="space-y-2">
+        {socials.map((s: any) => {
+          const { platform: p, username: u } = parseSocialName(s.name)
+          return (
+            <Item key={s.id} variant="outline">
+              <ItemMedia>
+                <SocialIcon platform={p} className="h-5 w-5" />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{u}</ItemTitle>
+                <ItemDescription className="truncate">{s.link}</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeMutation.mutate(s.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </ItemActions>
+            </Item>
+          )
+        })}
+        {socials.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground">
+            Belum ada sosial media
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+function ConfigForm({
+  config,
+  userId,
+  liveConfig,
+  setLiveConfig,
+}: {
+  config: any
+  userId: string
+  liveConfig: ConfigFormValues
+  setLiveConfig: React.Dispatch<React.SetStateAction<ConfigFormValues>>
+}) {
+  const queryClient = useQueryClient()
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (values: ConfigFormValues) =>
+      upsertConfig({ data: { ...values, user_id: userId, id: config?.id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['website-config'] })
+      toast.success('Konfigurasi berhasil disimpan')
+    },
+  })
+
+  const [form, fields] = useForm<ConfigFormValues>({
+    id: 'config-form',
+    defaultValue: {
+      brand_name: config?.brand_name ?? '',
+      heading: config?.heading ?? '',
+      paragraph: config?.paragraph ?? '',
+      cta_text: config?.cta_text ?? '',
+      color_scheme: config?.color_scheme ?? '',
+      typography: config?.typography ?? '',
+      logo_url: config?.logo_url ?? '',
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: configFormSchema })
+    },
+    onSubmit(e, { submission }) {
+      e.preventDefault()
+      if (submission?.status !== 'success') return submission?.reply()
+      mutate(submission.value)
+    },
+    shouldValidate: 'onBlur',
+    shouldRevalidate: 'onInput',
+  })
+
+  return (
+    <form
+      {...getFormProps(form)}
+      className="space-y-4"
+      onChange={(e) => {
+        const formData = new FormData(e.currentTarget)
+        setLiveConfig(Object.fromEntries(formData) as any)
+      }}
+    >
+      <Field>
+        <Label htmlFor={fields.brand_name.id}>Nama Brand</Label>
+        <Input
+          {...getInputProps(fields.brand_name, { type: 'text' })}
+          placeholder="Etalaseku"
+        />
+        <FieldError>{fields.brand_name.errors}</FieldError>
+      </Field>
+      <Field>
+        <Label htmlFor={fields.heading.id}>Heading</Label>
+        <Input
+          {...getInputProps(fields.heading, { type: 'text' })}
+          placeholder="Judul utama"
+        />
+        <FieldError>{fields.heading.errors}</FieldError>
+      </Field>
+      <Field>
+        <Label htmlFor={fields.paragraph.id}>Paragraf</Label>
+        <Textarea
+          name={fields.paragraph.name}
+          id={fields.paragraph.id}
+          defaultValue={fields.paragraph.value ?? ''}
+          placeholder="Deskripsi singkat"
+        />
+        <FieldError>{fields.paragraph.errors}</FieldError>
+      </Field>
+      <Field>
+        <Label htmlFor={fields.cta_text.id}>Teks CTA</Label>
+        <Input
+          {...getInputProps(fields.cta_text, { type: 'text' })}
+          placeholder="Lihat Produk"
+        />
+      </Field>
+      <Field>
+        <Label>Color Palette</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {COLOR_PALETTES.map((palette) => (
+            <label key={palette.value} className="cursor-pointer">
+              <input
+                type="radio"
+                name={fields.color_scheme.name}
+                value={palette.value}
+                defaultChecked={fields.color_scheme.value === palette.value}
+                className="peer sr-only"
+                onChange={() =>
+                  setLiveConfig((c) => ({ ...c, color_scheme: palette.value }))
+                }
+              />
+              <div className="flex gap-0.5 rounded-md border-2 border-transparent p-1.5 peer-checked:border-primary">
+                {palette.colors.map((c) => (
+                  <div
+                    key={c}
+                    className="h-6 flex-1 rounded-sm"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <p className="mt-1 text-center text-xs text-muted-foreground">
+                {palette.label}
+              </p>
+            </label>
           ))}
         </div>
-      )}
-    </div>
+      </Field>
+      <Field>
+        <Label>Font</Label>
+        <Select
+          name={fields.typography.name}
+          defaultValue={fields.typography.value ?? ''}
+          onValueChange={(v) => setLiveConfig((c) => ({ ...c, typography: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih font" />
+          </SelectTrigger>
+          <SelectContent>
+            {FONT_COMBINATIONS.map((font) => (
+              <SelectItem key={font.value} value={font.value}>
+                <span style={{ fontFamily: font.value }}>{font.label}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field>
+        <Label>Logo</Label>
+        {liveConfig.logo_url ? (
+          <div className="relative">
+            <img
+              src={liveConfig.logo_url}
+              alt="Logo"
+              className="h-20 w-full rounded-lg object-contain bg-muted p-2"
+            />
+            <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg bg-black/40 opacity-0 transition hover:opacity-100">
+              <span className="text-sm font-medium text-white">Ganti Logo</span>
+              <Input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = async () => {
+                    const base64 = (reader.result as string).split(',')[1]
+                    const result = await uploadImage({
+                      data: { filename: file.name, base64 },
+                    })
+                    setLiveConfig((c) => ({ ...c, logo_url: result.url }))
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+            </label>
+          </div>
+        ) : (
+          <label className="cursor-pointer">
+            <Empty className="border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ImagePlus />
+                </EmptyMedia>
+                <EmptyTitle className="text-sm">Upload Logo</EmptyTitle>
+                <EmptyDescription>Klik untuk memilih logo</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+            <Input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = async () => {
+                  const base64 = (reader.result as string).split(',')[1]
+                  const result = await uploadImage({
+                    data: { filename: file.name, base64 },
+                  })
+                  setLiveConfig((c) => ({ ...c, logo_url: result.url }))
+                }
+                reader.readAsDataURL(file)
+              }}
+            />
+          </label>
+        )}
+        <input
+          type="hidden"
+          name={fields.logo_url.name}
+          value={liveConfig.logo_url}
+        />
+      </Field>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? 'Menyimpan...' : 'Simpan Konfigurasi'}
+      </Button>
+    </form>
   )
 }
 
-function ContentSection({
-  title,
-  children,
+function LinktreePreview({
+  config,
+  socials,
+  user,
 }: {
-  title: string
-  children: React.ReactNode
+  config: ConfigFormValues
+  socials: any[]
+  user: any
 }) {
+  const primaryColor = config.color_scheme || '#6366f1'
+  const fontFamily = config.typography || 'Outfit'
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.email?.split('@')[0] ||
+    config.brand_name ||
+    'User'
+  const avatarUrl = user?.user_metadata?.avatar_url || ''
+  const initials = displayName.charAt(0).toUpperCase()
+
   return (
-    <details open className="group rounded-md border">
-      <summary className="cursor-pointer px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center justify-between list-none">
-        {title}
-        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="border-t p-3 space-y-3">{children}</div>
-    </details>
+    <div
+      style={{ fontFamily }}
+      className="relative min-h-full overflow-hidden bg-background"
+    >
+      {/* Gradient Orbs */}
+      <div
+        className="absolute -top-24 -left-24 size-72 rounded-full opacity-30 blur-3xl md:size-96"
+        style={{ backgroundColor: primaryColor }}
+      />
+      <div
+        className="absolute -bottom-24 -right-24 size-72 rounded-full opacity-20 blur-3xl md:size-96"
+        style={{ backgroundColor: primaryColor }}
+      />
+
+      {/* Grid Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40" />
+
+      <div className="relative z-10 mx-auto max-w-md px-4 py-12 text-center">
+        <Avatar className="mx-auto size-24 border-4 border-background shadow-lg">
+          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarFallback
+            className="text-3xl font-bold text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+
+        <h1 className="mt-5 text-xl font-bold">
+          @{config.brand_name?.toLowerCase().replace(/\s+/g, '') || displayName}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {config.paragraph || 'Find me on social media'}
+        </p>
+
+        <div className="mt-8 space-y-3 text-left">
+          {socials.length > 0 ? (
+            socials.map((s: any) => {
+              const { platform, username } = parseSocialName(s.name)
+              return (
+                <Item
+                  key={s.id}
+                  asChild
+                  variant="outline"
+                  className="group rounded-2xl bg-background/80 backdrop-blur-sm"
+                  style={{ borderColor: `${primaryColor}40` }}
+                >
+                  <a href={s.link || '#'} target="_blank" rel="noreferrer">
+                    <ItemMedia>
+                      <div
+                        className="flex size-10 items-center justify-center rounded-full text-white"
+                        style={{ color: primaryColor }}
+                      >
+                        <SocialIcon platform={platform} />
+                      </div>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle className="capitalize">{platform}</ItemTitle>
+                      <ItemDescription>{username}</ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <ArrowRight className="text-muted-foreground transition-transform group-hover:translate-x-1" />
+                    </ItemActions>
+                  </a>
+                </Item>
+              )
+            })
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              Belum ada sosial media
+            </p>
+          )}
+        </div>
+
+        <div className="mt-12 text-xs text-muted-foreground">
+          <p className="font-serif italic" style={{ color: primaryColor }}>
+            {config.brand_name || 'Etalaseku'}
+          </p>
+          <p className="mt-1">Powered by Etalaseku</p>
+        </div>
+      </div>
+    </div>
   )
 }
