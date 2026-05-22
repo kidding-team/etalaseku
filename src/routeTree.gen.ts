@@ -13,8 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
+import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
 import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
@@ -39,17 +39,17 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedLandingPageRoute =
   AuthenticatedLandingPageRouteImport.update({
     id: '/landing-page',
     path: '/landing-page',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -102,12 +102,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/landing-page': typeof AuthenticatedLandingPageRoute
-}
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -120,6 +114,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/landing-page'
     | '/products'
     | '/konten/$id'
     | '/konten/baru'
@@ -130,6 +125,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/landing-page'
     | '/products'
     | '/konten/$id'
     | '/konten/baru'
@@ -185,16 +181,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/landing-page': {
-      id: '/_authenticated/landing-page'
-      path: '/landing-page'
-      fullPath: '/landing-page'
-      preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
     '/_authenticated/products': {
       id: '/_authenticated/products'
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof AuthenticatedProductsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/landing-page': {
+      id: '/_authenticated/landing-page'
+      path: '/landing-page'
+      fullPath: '/landing-page'
+      preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
