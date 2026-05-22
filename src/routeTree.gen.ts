@@ -93,12 +93,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
-}
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/products'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/login' | '/dashboard' | '/products'
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
@@ -110,6 +104,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/products'
     | '/konten/$id'
     | '/konten/baru'
     | '/konten/'
@@ -119,6 +114,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/products'
     | '/konten/$id'
     | '/konten/baru'
     | '/konten'

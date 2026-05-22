@@ -14,7 +14,7 @@ import {
 const NAV_ITEMS = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Produk', to: '/products', icon: Package },
-  { label: 'Konten', to: '/dashboard', icon: FileText },
+  { label: 'Konten', to: '/konten', icon: FileText },
   { label: 'Landing Page', to: '/dashboard', icon: Globe },
 ]
 

@@ -1,9 +1,17 @@
 import * as React from 'react'
-import { createFileRoute, Outlet, useLocation, useRouter, Link } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  useLocation,
+  useRouter,
+  Link,
+} from '@tanstack/react-router'
 import { AppSidebar } from '@/components/shared/app-sidebar'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
   SidebarInset,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
@@ -17,6 +25,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { supabase } from '@/lib/supabase'
+import { LayoutDashboard, Package, FileText, Globe } from 'lucide-react'
 
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
@@ -95,8 +104,7 @@ type NavItem = (typeof navItems)[number]
 function NavLinkItem({ item }: { item: NavItem }) {
   const location = useLocation()
   const isActive =
-    location.pathname === item.to ||
-    location.pathname.startsWith(`${item.to}/`)
+    location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
