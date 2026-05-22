@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="font-bold text-xl tracking-tight">EtalaseKu</span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-sm mb-6 leading-relaxed">
-              Platform manajemen produk dan pembuat caption otomatis menggunakan AI untuk memaksimalkan penjualan UMKM Anda.
+              Lebih dari sekadar etalase online. Maksimalkan potensi penjualan Anda dengan AI untuk pemasaran yang lebih efisien dan efektif.
             </p>
             <div className="flex gap-4 text-muted-foreground">
               <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub" className="hover:text-foreground transition-colors">
