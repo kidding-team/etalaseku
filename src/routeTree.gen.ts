@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
@@ -38,6 +39,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedLandingPageRoute =
+  AuthenticatedLandingPageRouteImport.update({
+    id: '/landing-page',
+    path: '/landing-page',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -80,6 +88,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -92,6 +101,13 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/landing-page': typeof AuthenticatedLandingPageRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/about' | '/login' | '/dashboard' | '/landing-page'
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -125,6 +141,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/landing-page'
     | '/_authenticated/products'
     | '/_authenticated/konten/$id'
     | '/_authenticated/konten/baru'
@@ -168,6 +185,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/landing-page': {
+      id: '/_authenticated/landing-page'
+      path: '/landing-page'
+      fullPath: '/landing-page'
+      preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
     '/_authenticated/products': {
       id: '/_authenticated/products'
       path: '/products'
@@ -208,6 +230,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedLandingPageRoute: typeof AuthenticatedLandingPageRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
   AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
@@ -216,6 +239,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedLandingPageRoute: AuthenticatedLandingPageRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
   AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
