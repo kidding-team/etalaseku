@@ -22,6 +22,13 @@ export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
 })
 
+const navItems = [
+  { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' as const },
+  { title: 'Produk', icon: Package, to: '/dashboard' as const },
+  { title: 'Konten', icon: FileText, to: '/konten' as const },
+  { title: 'Landing Page', icon: Globe, to: '/dashboard' as const },
+]
+
 function AuthenticatedLayout() {
   const router = useRouter()
 
@@ -80,5 +87,24 @@ function DynamicBreadcrumb() {
         })}
       </BreadcrumbList>
     </Breadcrumb>
+  )
+}
+
+type NavItem = (typeof navItems)[number]
+
+function NavLinkItem({ item }: { item: NavItem }) {
+  const location = useLocation()
+  const isActive =
+    location.pathname === item.to ||
+    location.pathname.startsWith(`${item.to}/`)
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive}>
+        <Link to={item.to}>
+          <item.icon />
+          <span>{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   )
 }

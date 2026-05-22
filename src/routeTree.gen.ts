@@ -15,6 +15,9 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
+import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
+import { Route as AuthenticatedKontenIdRouteImport } from './routes/_authenticated/konten/$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -45,6 +48,22 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedKontenIndexRoute =
+  AuthenticatedKontenIndexRouteImport.update({
+    id: '/konten/',
+    path: '/konten/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedKontenBaruRoute = AuthenticatedKontenBaruRouteImport.update({
+  id: '/konten/baru',
+  path: '/konten/baru',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedKontenIdRoute = AuthenticatedKontenIdRouteImport.update({
+  id: '/konten/$id',
+  path: '/konten/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +71,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/konten/': typeof AuthenticatedKontenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +81,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/konten': typeof AuthenticatedKontenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -74,6 +99,29 @@ export interface FileRouteTypes {
   fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/products'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/about' | '/login' | '/dashboard' | '/products'
+  '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
+  '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
+  '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/login'
+    | '/dashboard'
+    | '/konten/$id'
+    | '/konten/baru'
+    | '/konten/'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/about'
+    | '/login'
+    | '/dashboard'
+    | '/konten/$id'
+    | '/konten/baru'
+    | '/konten'
   id:
     | '__root__'
     | '/'
@@ -82,6 +130,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/dashboard'
     | '/_authenticated/products'
+    | '/_authenticated/konten/$id'
+    | '/_authenticated/konten/baru'
+    | '/_authenticated/konten/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,17 +186,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/konten/': {
+      id: '/_authenticated/konten/'
+      path: '/konten'
+      fullPath: '/konten/'
+      preLoaderRoute: typeof AuthenticatedKontenIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/konten/baru': {
+      id: '/_authenticated/konten/baru'
+      path: '/konten/baru'
+      fullPath: '/konten/baru'
+      preLoaderRoute: typeof AuthenticatedKontenBaruRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/konten/$id': {
+      id: '/_authenticated/konten/$id'
+      path: '/konten/$id'
+      fullPath: '/konten/$id'
+      preLoaderRoute: typeof AuthenticatedKontenIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
+  AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
+  AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
+  AuthenticatedKontenIndexRoute: typeof AuthenticatedKontenIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
+  AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
+  AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
+  AuthenticatedKontenIndexRoute: AuthenticatedKontenIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
