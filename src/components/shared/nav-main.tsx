@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Produk', to: '/products', icon: Package },
   { label: 'Konten', to: '/konten', icon: FileText },
-  { label: 'Landing Page', to: '/dashboard', icon: Globe },
+  { label: 'Landing Page', to: '/landing-page', icon: Globe },
 ]
 
 export function NavMain({ ...props }: React.ComponentProps<typeof SidebarContent>) {

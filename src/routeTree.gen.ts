@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
+import { Route as AuthenticatedLandingPageRouteImport } from './routes/_authenticated/landing-page'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
 import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
@@ -43,6 +44,12 @@ const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLandingPageRoute =
+  AuthenticatedLandingPageRouteImport.update({
+    id: '/landing-page',
+    path: '/landing-page',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -80,6 +88,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/landing-page': typeof AuthenticatedLandingPageRoute
   '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -92,6 +101,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/landing-page': typeof AuthenticatedLandingPageRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/landing-page'
     | '/products'
     | '/konten/$id'
     | '/konten/baru'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/dashboard'
+    | '/landing-page'
     | '/products'
     | '/konten/$id'
     | '/konten/baru'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/landing-page'
     | '/_authenticated/products'
     | '/_authenticated/konten/$id'
     | '/_authenticated/konten/baru'
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/landing-page': {
+      id: '/_authenticated/landing-page'
+      path: '/landing-page'
+      fullPath: '/landing-page'
+      preLoaderRoute: typeof AuthenticatedLandingPageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -208,6 +228,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedLandingPageRoute: typeof AuthenticatedLandingPageRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
   AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
@@ -216,6 +237,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedLandingPageRoute: AuthenticatedLandingPageRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
   AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
