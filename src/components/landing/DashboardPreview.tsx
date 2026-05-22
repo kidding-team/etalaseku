@@ -5,9 +5,10 @@ export function DashboardPreview() {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const images = [
-    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000",
-    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2000",
-    "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&q=80&w=2000"
+    '/dashboard.png',
+    '/etalase.png',
+    '/konten.png',
+    '/manajemen-konten.png',
   ]
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function DashboardPreview() {
         transition={{ duration: 0.8, type: "spring", bounce: 0.2 }}
         className="relative mx-auto bg-zinc-100 dark:bg-zinc-900/50 rounded-2xl md:rounded-[2rem] p-3 sm:p-6 md:p-8 lg:p-12 border border-border/50"
       >
-        <div className="relative aspect-video w-full bg-white dark:bg-zinc-950 rounded-xl md:rounded-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
+        <div className="relative aspect-40/19 w-full bg-white dark:bg-zinc-950 rounded-xl md:rounded-2xl overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
           {images.map((src, index) => (
             <div
               key={src}
@@ -37,7 +38,7 @@ export function DashboardPreview() {
               <img
                 src={src}
                 alt={`Dashboard Preview ${index + 1}`}
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-contain object-top"
               />
             </div>
           ))}
