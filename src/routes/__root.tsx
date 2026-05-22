@@ -1,8 +1,9 @@
-import { HeadContent, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
-import Footer from '../components/Footer'
-import Header from '../components/Header'
+import {
+  HeadContent,
+  Scripts,
+  createRootRoute,
+  Outlet,
+} from '@tanstack/react-router'
 
 import appCss from '../styles.css?url'
 
@@ -11,55 +12,29 @@ const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getIte
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: 'TanStack Start Starter',
-      },
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { title: 'Etalaseku' },
     ],
-    links: [
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
-    ],
+    links: [{ rel: 'stylesheet', href: appCss }],
   }),
-  shellComponent: RootDocument,
+  component: RootLayout,
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
-  const routerState = useRouterState()
-  const isDashboardOrLogin = routerState.location.pathname.startsWith('/dashboard') || routerState.location.pathname.startsWith('/login')
-
+function RootLayout() {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-        {!isDashboardOrLogin && <Header />}
-        {children}
-        {!isDashboardOrLogin && <Footer />}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+      <body
+        className="min-h-screen bg-background font-sans antialiased"
+        cz-shourtcut-listen="true"
+      >
+        <Outlet />
         <Scripts />
       </body>
     </html>
   )
 }
-
