@@ -35,6 +35,7 @@ function PublicLandingRoute() {
       products={data.products}
       socials={data.socials}
       slug={slug}
+      userId={data.config?.user_id}
     />
   )
 }
