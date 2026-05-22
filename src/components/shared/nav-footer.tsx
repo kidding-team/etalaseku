@@ -1,11 +1,10 @@
 import * as React from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { EllipsisVertical, LogOut, Settings } from 'lucide-react'
+import { EllipsisVertical, LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -45,12 +44,6 @@ export function NavFooter() {
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton tooltip="Settings">
-            <Settings />
-            <span>Settings</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
@@ -86,12 +79,6 @@ export function NavFooter() {
                   </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Settings /> Settings
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Button variant="ghost" onClick={logout} className="w-full justify-start text-destructive">

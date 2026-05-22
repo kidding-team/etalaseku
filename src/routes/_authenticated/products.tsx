@@ -121,7 +121,14 @@ function ProductsPage() {
   return (
     <div className="flex-1 p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Produk</h2>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Produk
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Kelola produk-produk untuk etalase digital Anda.
+          </p>
+        </div>
         <Button
           onClick={() => {
             setEditingProduct(null)
@@ -382,7 +389,7 @@ function ProductFormDrawer({
                     ? Number(raw).toLocaleString('id-ID')
                     : ''
                 }}
-                onBeforeInput={() => {}}
+                onBeforeInput={() => { }}
               />
             </InputGroup>
             <FieldError>{fields.price.errors}</FieldError>
