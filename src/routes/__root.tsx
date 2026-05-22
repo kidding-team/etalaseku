@@ -31,7 +31,10 @@ function RootLayout() {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body
+        className="min-h-screen bg-background font-sans antialiased"
+        cz-shortcut-listen="true"
+      >
         <QueryClientProvider client={queryClient}>
           <Outlet />
           <Toaster />
