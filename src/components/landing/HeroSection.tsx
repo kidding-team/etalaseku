@@ -91,7 +91,7 @@ export function HeroSection() {
           className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight text-foreground mb-6 leading-[1.1] md:leading-[1.05]"
         >
           Kelola <em className="font-serif italic font-medium">Katalog</em> Bisnis <br className="hidden md:block" />
-          Anda dengan Cerdas
+          Anda dengan Efisien
         </motion.h1>
 
 
@@ -101,7 +101,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
           className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-medium"
         >
-          Platform manajemen produk dan pembuat caption otomatis menggunakan AI untuk memaksimalkan penjualan UMKM Anda.
+          Maksimalkan potensi penjualan Anda dengan AI untuk pemasaran yang lebih efisien dan efektif.
         </motion.p>
 
 

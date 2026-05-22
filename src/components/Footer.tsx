@@ -36,7 +36,6 @@ export default function Footer() {
             <h3 className="font-semibold text-foreground mb-4">Produk</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li><a href="#features" className="hover:text-foreground transition-colors">Fitur Utama</a></li>
-              <li><a href="#showcase" className="hover:text-foreground transition-colors">Demo AI</a></li>
               <li><a href="#testimonials" className="hover:text-foreground transition-colors">Testimoni</a></li>
             </ul>
           </div>
