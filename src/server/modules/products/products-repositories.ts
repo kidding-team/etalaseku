@@ -15,7 +15,8 @@ export const productRepository = {
   },
   
   async create(product: InsertProduct) {
-    const { data, error } = await supabase.from('products').insert(product).select().single()
+    const { id, ...rest } = product as any
+    const { data, error } = await supabase.from('products').insert(rest).select().single()
     if (error) throw new Error(error.message)
     return data
   },

@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKontenIndexRouteImport } from './routes/_authenticated/konten/index'
 import { Route as AuthenticatedKontenBaruRouteImport } from './routes/_authenticated/konten/baru'
@@ -36,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten/': typeof AuthenticatedKontenIndexRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/products': typeof AuthenticatedProductsRoute
   '/konten/$id': typeof AuthenticatedKontenIdRoute
   '/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/konten': typeof AuthenticatedKontenIndexRoute
@@ -84,6 +92,13 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/products': typeof AuthenticatedProductsRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/about' | '/login' | '/dashboard' | '/products'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/about' | '/login' | '/dashboard' | '/products'
   '/_authenticated/konten/$id': typeof AuthenticatedKontenIdRoute
   '/_authenticated/konten/baru': typeof AuthenticatedKontenBaruRoute
   '/_authenticated/konten/': typeof AuthenticatedKontenIndexRoute
@@ -114,6 +129,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/products'
     | '/_authenticated/konten/$id'
     | '/_authenticated/konten/baru'
     | '/_authenticated/konten/'
@@ -156,6 +172,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/products': {
+      id: '/_authenticated/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof AuthenticatedProductsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -189,6 +212,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedKontenIdRoute: typeof AuthenticatedKontenIdRoute
   AuthenticatedKontenBaruRoute: typeof AuthenticatedKontenBaruRoute
   AuthenticatedKontenIndexRoute: typeof AuthenticatedKontenIndexRoute
@@ -196,6 +220,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedKontenIdRoute: AuthenticatedKontenIdRoute,
   AuthenticatedKontenBaruRoute: AuthenticatedKontenBaruRoute,
   AuthenticatedKontenIndexRoute: AuthenticatedKontenIndexRoute,
