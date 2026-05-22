@@ -217,20 +217,26 @@ function TikTokPreview({
   mediaUrls,
 }: PreviewPlatformProps) {
   const initial = username.charAt(0).toUpperCase()
-  const main = mediaUrls[0]
+  const [active, setActive] = React.useState(0)
+  React.useEffect(() => {
+    setActive(0)
+  }, [mediaUrls.length])
+  const current = mediaUrls[active] ?? mediaUrls[0]
+  const hasMultiple = mediaUrls.length > 1
+
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-800 bg-black text-white shadow-sm">
       <div className="relative">
         <AspectRatio ratio={9 / 16} className="overflow-hidden bg-neutral-900">
-          {main ? (
+          {current ? (
             <div className="relative size-full">
               <img
-                src={main}
+                src={current}
                 aria-hidden
                 className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
               />
               <img
-                src={main}
+                src={current}
                 alt=""
                 className="relative size-full object-contain"
               />
@@ -241,6 +247,31 @@ function TikTokPreview({
             </div>
           )}
         </AspectRatio>
+
+        {/* Stories-style progress bars (TikTok Photo Mode) */}
+        {hasMultiple && (
+          <div className="pointer-events-none absolute inset-x-0 top-2 z-10 flex items-center gap-1 px-3">
+            {mediaUrls.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActive(idx)}
+                aria-label={`Lihat foto ${idx + 1}`}
+                className={cn(
+                  'pointer-events-auto h-0.5 flex-1 rounded-full transition-colors duration-200',
+                  idx === active ? 'bg-white' : 'bg-white/30',
+                )}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Counter "1/3" kanan-atas */}
+        {hasMultiple && (
+          <div className="absolute right-3 top-5 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium tabular-nums">
+            {active + 1}/{mediaUrls.length}
+          </div>
+        )}
 
         {/* Action rail kanan */}
         <div className="absolute bottom-16 right-2 flex flex-col items-center gap-3 text-white">
@@ -392,19 +423,82 @@ function FacebookMediaGrid({ mediaUrls }: { mediaUrls: string[] }) {
       </AspectRatio>
     )
   }
-  // 2x2 grid (4 max)
+  return (
+    <MultiImageGrid
+      mediaUrls={mediaUrls}
+      bgGap="bg-neutral-200 dark:bg-neutral-800"
+      bgCell="bg-neutral-100 dark:bg-neutral-900"
+    />
+  )
+}
+
+/**
+ * Grid multi-gambar serbaguna untuk preview Facebook & Twitter (2+ gambar).
+ * - 2 gambar: 2 kolom side-by-side (ratio 2:1)
+ * - 3 gambar: 1 besar di kiri (row-span-2) + 2 stacked di kanan (square)
+ * - 4+ gambar: 2×2 grid; cell terakhir overlay "+N" kalau ada lebih
+ */
+function MultiImageGrid({
+  mediaUrls,
+  bgGap,
+  bgCell,
+  rounded = false,
+}: {
+  mediaUrls: string[]
+  bgGap: string
+  bgCell: string
+  rounded?: boolean
+}) {
+  const wrapperBase = cn(
+    'gap-0.5',
+    bgGap,
+    rounded && 'overflow-hidden rounded-2xl',
+  )
+
+  if (mediaUrls.length === 2) {
+    return (
+      <div className={cn('grid aspect-[2/1] grid-cols-2', wrapperBase)}>
+        {mediaUrls.slice(0, 2).map((url, i) => (
+          <div key={i} className={cn('overflow-hidden', bgCell)}>
+            <img src={url} alt="" className="size-full object-cover" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (mediaUrls.length === 3) {
+    return (
+      <div
+        className={cn(
+          'grid aspect-square grid-cols-2 grid-rows-2',
+          wrapperBase,
+        )}
+      >
+        <div className={cn('row-span-2 overflow-hidden', bgCell)}>
+          <img
+            src={mediaUrls[0]}
+            alt=""
+            className="size-full object-cover"
+          />
+        </div>
+        {mediaUrls.slice(1, 3).map((url, i) => (
+          <div key={i} className={cn('overflow-hidden', bgCell)}>
+            <img src={url} alt="" className="size-full object-cover" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // 4+
   const items = mediaUrls.slice(0, 4)
   const remaining = mediaUrls.length - items.length
   return (
-    <div className="grid grid-cols-2 gap-0.5 bg-neutral-200 dark:bg-neutral-800">
+    <div className={cn('grid aspect-square grid-cols-2', wrapperBase)}>
       {items.map((url, i) => (
-        <div key={i} className="relative">
-          <AspectRatio
-            ratio={1}
-            className="overflow-hidden bg-neutral-100 dark:bg-neutral-900"
-          >
-            <img src={url} alt="" className="size-full object-cover" />
-          </AspectRatio>
+        <div key={i} className={cn('relative overflow-hidden', bgCell)}>
+          <img src={url} alt="" className="size-full object-cover" />
           {i === 3 && remaining > 0 && (
             <div className="absolute inset-0 grid place-content-center bg-black/50 text-xl font-semibold text-white">
               +{remaining}
@@ -443,7 +537,6 @@ function TwitterPreview({
   mediaUrls,
 }: PreviewPlatformProps) {
   const initial = username.charAt(0).toUpperCase()
-  const main = mediaUrls[0]
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-800 bg-black px-3 py-3 text-white shadow-sm">
       <div className="flex items-start gap-2">
@@ -470,27 +563,7 @@ function TwitterPreview({
             />
           </div>
 
-          {main && (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-800">
-              <AspectRatio
-                ratio={4 / 5}
-                className="overflow-hidden bg-neutral-900"
-              >
-                <div className="relative size-full">
-                  <img
-                    src={main}
-                    aria-hidden
-                    className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
-                  />
-                  <img
-                    src={main}
-                    alt=""
-                    className="relative size-full object-contain"
-                  />
-                </div>
-              </AspectRatio>
-            </div>
-          )}
+          <TwitterMediaGrid mediaUrls={mediaUrls} />
 
           <div className="mt-3 flex items-center justify-between text-neutral-500">
             <TwitterActionBtn
@@ -510,6 +583,39 @@ function TwitterPreview({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function TwitterMediaGrid({ mediaUrls }: { mediaUrls: string[] }) {
+  if (mediaUrls.length === 0) return null
+  if (mediaUrls.length === 1) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-800">
+        <AspectRatio ratio={4 / 5} className="overflow-hidden bg-neutral-900">
+          <div className="relative size-full">
+            <img
+              src={mediaUrls[0]}
+              aria-hidden
+              className="absolute inset-0 size-full scale-110 object-cover blur-2xl"
+            />
+            <img
+              src={mediaUrls[0]}
+              alt=""
+              className="relative size-full object-contain"
+            />
+          </div>
+        </AspectRatio>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-800">
+      <MultiImageGrid
+        mediaUrls={mediaUrls}
+        bgGap="bg-neutral-800"
+        bgCell="bg-neutral-900"
+      />
     </div>
   )
 }
