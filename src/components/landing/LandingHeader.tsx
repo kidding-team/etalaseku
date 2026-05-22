@@ -29,7 +29,12 @@ export function LandingHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto max-w-6xl flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-3">
+          <img
+            src="/logo192.png"
+            alt="EtalaseKu"
+            className="h-8 w-8 rounded-md"
+          />
           <span className="font-medium text-2xl font-serif italic">EtalaseKu</span>
         </Link>
 
@@ -69,10 +74,15 @@ export function LandingHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] sm:w-[320px]">
               <SheetHeader>
-                <SheetTitle className="font-serif italic text-xl">
-                  EtalaseKu
-                </SheetTitle>
-              </SheetHeader>
+              <SheetTitle className="flex items-center gap-2 font-serif italic text-xl">
+                <img
+                  src="/logo192.png"
+                  alt="EtalaseKu"
+                  className="h-6 w-6 rounded"
+                />
+                EtalaseKu
+              </SheetTitle>
+            </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1 px-4">
                 {NAV_ITEMS.map((item) => (
                   <a

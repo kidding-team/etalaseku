@@ -17,7 +17,11 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center gap-4">
         <Link to="/" className="flex items-center gap-2 font-semibold">
-          <span className="h-2 w-2 rounded-full bg-primary" />
+          <img
+            src="/logo192.png"
+            alt="EtalaseKu"
+            className="h-6 w-6 rounded"
+          />
           Etalaseku
         </Link>
 

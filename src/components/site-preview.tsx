@@ -25,10 +25,7 @@ import {
   ItemTitle,
 } from '@/components/ui/item'
 import { ArrowRight, Link2 as LinkIcon, Search } from 'lucide-react'
-import {
-  SocialIcon,
-  parseSocialName,
-} from '@/components/shared/social-icon'
+import { SocialIcon, parseSocialName } from '@/components/shared/social-icon'
 
 export type SitePreviewConfig = {
   brand_name?: string | null
@@ -303,34 +300,28 @@ function ProductsBrowser({
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     let result = products.filter((p: any) => {
-      if (q && !(p.name?.toLowerCase().includes(q))) return false
+      if (q && !p.name?.toLowerCase().includes(q)) return false
       if (category !== 'all' && p.category !== category) return false
       return true
     })
     switch (sort) {
       case 'price_asc':
-        result = [...result].sort(
-          (a, b) => (a.price ?? 0) - (b.price ?? 0),
-        )
+        result = [...result].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
         break
       case 'price_desc':
-        result = [...result].sort(
-          (a, b) => (b.price ?? 0) - (a.price ?? 0),
-        )
+        result = [...result].sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
         break
       case 'oldest':
         result = [...result].sort(
           (a, b) =>
-            new Date(a.created_at).getTime() -
-            new Date(b.created_at).getTime(),
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
         )
         break
       case 'newest':
       default:
         result = [...result].sort(
           (a, b) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime(),
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         break
     }
@@ -345,8 +336,7 @@ function ProductsBrowser({
     )
   }
 
-  const hasActiveFilter =
-    search.trim().length > 0 || category !== 'all'
+  const hasActiveFilter = search.trim().length > 0 || category !== 'all'
 
   return (
     <div className="flex flex-col gap-5">
@@ -485,7 +475,7 @@ export function SitePreviewLinktree({
   return (
     <div
       style={{ fontFamily }}
-      className="relative min-h-full overflow-hidden bg-background"
+      className="relative min-h-screen overflow-hidden bg-background"
     >
       <div
         className="absolute -top-24 -left-24 size-72 rounded-full opacity-30 blur-3xl md:size-96"
