@@ -1,32 +1,102 @@
-# Struktur Folder & Arsitektur Proyek (Best Practice)
+# Arsitektur Proyek — EtalaseKu
 
-Panduan ini mengatur peletakan file dan folder agar terstruktur dengan baik, mudah di-maintenance, dan memisahkan dengan jelas antara rute publik dan privat.
+## Tech Stack
 
-## Root Directory
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | TanStack Start (full-stack React, SSR) |
+| UI Library | React 19 |
+| Routing | TanStack Router (file-based) |
+| Styling | Tailwind CSS v4 + shadcn/ui (New York style) |
+| Backend/API | oRPC (type-safe RPC) |
+| Database | Supabase (PostgreSQL + Auth) |
+| Validation | Zod v4 |
+| Forms | React Hook Form + @hookform/resolvers |
+| Charts | Recharts |
+| Build Tool | Vite 8 |
+| Testing | Vitest + Testing Library |
+| Deployment | Netlify (via @netlify/vite-plugin-tanstack-start) |
+| Package Manager | Bun |
+| Language | TypeScript 6 |
+
+## Struktur Folder
 
 ```text
 /
-├── public/                 # Aset statis (gambar, favicon, robots.txt, dll). File di sini di-serve secara langsung tanpa diproses.
-├── src/                    # Source code utama aplikasi.
-│   ├── components/         # Komponen UI.
-│   │   ├── ui/             # Komponen global dari Shadcn UI (button, input, dialog, dll).
-│   │   └── ...             # Komponen spesifik domain (misalnya fitur produk).
-│   ├── lib/                # Utilitas, konfigurasi third-party, dan helper (contoh: supabase.ts, orpc.ts, utils.ts).
-│   ├── routes/             # File-based routing (TanStack Start/Router).
-│   │   ├── _public/        # (Route Group) Rute yang bisa diakses tanpa login (misal: /login, /register, /forgot-password).
-│   │   ├── _private/       # (Route Group) Rute yang WAJIB login (misal: /dashboard, /settings). Dilengkapi auth guard.
-│   │   └── __root.tsx      # Root layout aplikasi.
-│   ├── styles.css          # Global CSS (hanya untuk variabel CSS dan import Tailwind v4).
-│   ├── types/              # Type definition global (misal: database.types.ts dari Supabase).
-│   └── router.tsx          # Konfigurasi instance TanStack Router.
-├── architecture.md         # File dokumentasi arsitektur ini.
-├── components.json         # Konfigurasi CLI Shadcn UI.
-├── package.json            # Daftar dependensi & scripts proyek.
-├── vite.config.ts          # Konfigurasi Vite & plugin TanStack Start.
-└── ...                     # Konfigurasi tools lainnya (ESLint, Prettier, dsb).
+├── public/                 # Aset statis (favicon, logo, robots.txt)
+├── src/
+│   ├── components/         # Komponen UI
+│   │   ├── ui/             # Komponen shadcn/ui (button, input, dialog, dll)
+│   │   ├── Header.tsx      # Header navigasi
+│   │   ├── Footer.tsx      # Footer
+│   │   └── ThemeToggle.tsx  # Toggle dark/light mode
+│   ├── hooks/              # Custom React hooks (use-mobile.ts, dll)
+│   ├── lib/                # Utilitas & konfigurasi third-party
+│   │   ├── supabase.ts     # Supabase client instance
+│   │   ├── orpc.ts         # oRPC client instance
+│   │   └── utils.ts        # Helper (cn, dll)
+│   ├── orpc/               # Backend logic (oRPC modular)
+│   │   └── router/         # Modul-modul API
+│   │       ├── products/
+│   │       ├── contents/
+│   │       └── landing-page/
+│   ├── routes/             # File-based routing (TanStack Router)
+│   │   ├── __root.tsx      # Root layout (HTML shell, Header/Footer conditional)
+│   │   ├── index.tsx       # Landing page
+│   │   ├── login.tsx       # Halaman login
+│   │   ├── dashboard.tsx   # Dashboard (private)
+│   │   └── about.tsx       # Halaman about
+│   ├── scripts/            # Script utilitas (create-module.ts)
+│   ├── server/             # Server-side code
+│   │   └── orpc.ts         # oRPC router definition
+│   ├── types/              # Type definitions
+│   │   └── database.types.ts  # Auto-generated Supabase types
+│   ├── router.tsx          # TanStack Router instance
+│   └── styles.css          # Global CSS (Tailwind v4 imports + CSS variables)
+├── supabase/               # Supabase local config
+├── architecture.md         # Dokumentasi arsitektur (file ini)
+├── components.json         # Konfigurasi shadcn/ui CLI
+├── vite.config.ts          # Konfigurasi Vite + plugins
+├── netlify.toml            # Konfigurasi deployment Netlify
+└── package.json            # Dependencies & scripts
 ```
 
-## Aturan Utama
-1. **Gunakan Utility Classes:** Seluruh *styling* harus menggunakan utility class Tailwind CSS v4. Hindari membuat custom native CSS class seperti `.card` atau `.wrapper`.
-2. **Komponen UI (*Atomic*):** Setiap elemen standar (seperti tombol atau form input) gunakan Shadcn UI yang diletakkan di `src/components/ui/`.
-3. **Route Groups:** Kelompokkan file routing yang memiliki *layout* atau aturan *auth* yang sama ke dalam Route Groups seperti `_private` atau `_public`. Route Groups tidak mempengaruhi URL final (URL tetap `/dashboard` bukan `/_private/dashboard`).
+## Arsitektur Aplikasi
+
+### Frontend (Client)
+
+- **Routing**: TanStack Router dengan file-based routing di `src/routes/`.
+- **Rendering**: SSR via TanStack Start, di-serve oleh Netlify Functions.
+- **State**: Lokal per-komponen (React state). Tidak ada global state manager.
+- **Styling**: Tailwind CSS v4 utility-first. Komponen UI dari shadcn/ui.
+- **Theme**: Dark/light mode via localStorage + `prefers-color-scheme`, diinisialisasi sebelum hydration untuk menghindari flash.
+
+### Backend (API)
+
+- **oRPC**: Type-safe RPC framework. Client di `src/lib/orpc.ts`, server router di `src/server/orpc.ts`.
+- **Modular Pattern**: Setiap domain/modul di `src/orpc/router/<module>/` memiliki 4 file:
+  - `*-controller.ts` — Handle request/response, panggil service
+  - `*-services.ts` — Business logic, panggil repository
+  - `*-repositories.ts` — Data access (Supabase queries)
+  - `*-schema.ts` — Validasi input dengan Zod
+- **Generator**: `bun run create:module <nama>` untuk scaffold modul baru.
+
+### Database
+
+- **Supabase** (hosted PostgreSQL) sebagai database utama.
+- Types di-generate otomatis via `npm run supabase:gen-types`.
+- Tabel yang ada: `captions`, `products`, dll.
+
+### Deployment
+
+- **Platform**: Netlify
+- **Build**: `vite build` → SSR output di-deploy sebagai Netlify Functions.
+- **Plugin**: `@netlify/vite-plugin-tanstack-start` menghandle integrasi otomatis.
+
+## Aturan & Konvensi
+
+1. **Styling**: Gunakan utility class Tailwind CSS. Hindari custom CSS class.
+2. **Komponen UI**: Gunakan shadcn/ui di `src/components/ui/`. Jangan buat komponen primitif sendiri.
+3. **API Module**: Buat modul baru via `bun run create:module <nama>`. Ikuti pattern controller → service → repository.
+4. **Type Safety**: Semua API input divalidasi dengan Zod. oRPC menjamin type-safety end-to-end.
+5. **Environment Variables**: Prefix `VITE_` untuk variabel yang diakses di client (contoh: `VITE_SUPABASE_URL`).

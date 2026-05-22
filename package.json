@@ -13,7 +13,8 @@
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
-    "supabase:gen-types": "npx supabase gen types typescript --project-id ofoixrddeetlxpzsptuu > src/types/database.types.ts"
+    "supabase:gen-types": "npx supabase gen types typescript --project-id ofoixrddeetlxpzsptuu > src/types/database.types.ts",
+    "create:module": "bun run src/scripts/create-module.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
